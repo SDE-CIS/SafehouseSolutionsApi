@@ -39,3 +39,29 @@ export const getUnitById = async (req, res) => {
         res.status(500).json({ success: false, message: error.message || error });
     }
 };
+
+// POST /units
+export const addUnit = async (req, res) => {
+    try {
+        const { Active, DateAdded, SensorTypeID, LocationID, UserID } = req.body;
+
+        await executeQuery(
+            `
+            INSERT INTO Units (Active, DateAdded, SensorTypeID, LocationID, UserID) 
+            VALUES (@Active, @DateAdded, @SensorTypeID, @LocationID, @UserID)
+            `,
+            [
+                { name: 'Active', value: Active },
+                { name: 'DateAdded', value: DateAdded },
+                { name: 'SensorTypeID', value: SensorTypeID },
+                { name: 'LocationID', value: LocationID },
+                { name: 'UserID', value: UserID },
+            ]
+        );
+
+        res.status(201).json("Unit added successfully!");
+    } catch (error) {
+        console.log(error);
+        res.status(400).json({ message: 'Failed to add unit.' });
+    }
+};
