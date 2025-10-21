@@ -25,3 +25,29 @@ export const getLocationsByID = async (req, res) => {
         res.status(500).json({ success: false, message: error.message || error });
     }
 };
+
+// POST /locations
+export const addLocation = async (req, res) => {
+    try {
+        const { LocationName } = req.body;
+
+        if (!LocationName || typeof LocationName !== 'string') {
+            return res.status(400).json({ 
+                message: getMessage(messages.error.typeError) 
+            });
+        }
+
+        await executeQuery(
+            `
+            INSERT INTO Locations (LocationName) 
+            VALUES (@LocationName);
+            `,
+            [{ name: 'LocationName', value: LocationName }]
+        );
+
+        res.status(201).json({ message: 'Location added successfully!' });
+    } catch (error) {
+        console.error(error);
+        res.status(400).json({ message: 'Failed to add location.' });
+    }
+};
