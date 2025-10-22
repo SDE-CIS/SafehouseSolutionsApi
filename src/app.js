@@ -33,6 +33,6 @@ app.get('/', (req, res) => {
   res.send('Hello, World!');
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on http://${HOST}:${PORT}`);
+app.listen(PORT, () => {
+  console.log(`Server is running on ${typeof PORT === 'string' ? PORT : `http://localhost:${PORT}`}`);
 });
