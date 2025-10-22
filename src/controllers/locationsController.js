@@ -31,16 +31,20 @@ export const addLocation = async (req, res) => {
     try {
         const { LocationName } = req.body;
 
+        if (!LocationName || LocationName.trim() === '')
+            return res.status(400).json({ message: 'LocationName is required.' });
+
         const existing = await executeQuery(
             `SELECT ID FROM Locations WHERE LOWER(LocationName) = LOWER(@LocationName);`,
-            [{ name: 'LocationName', value: LocationName }]
+            [{ name: 'LocationName', value: LocationName.trim() }]
         );
 
-        if (existing.length > 0)
+        if (Array.isArray(existing.recordset) && existing.recordset.length > 0)
             return res.status(409).json({ message: 'Location already exists.' });
 
-        await executeQuery(`INSERT INTO Locations (LocationName) VALUES (@LocationName);`,
-            [{ name: 'LocationName', value: LocationName }]
+        await executeQuery(
+            `INSERT INTO Locations (LocationName) VALUES (@LocationName);`,
+            [{ name: 'LocationName', value: LocationName.trim() }]
         );
 
         res.status(201).json({ message: 'Location added successfully!' });
@@ -53,26 +57,29 @@ export const addLocation = async (req, res) => {
 // PUT /locations/:id
 export const updateLocation = async (req, res) => {
     try {
-        console.log('Request body:', req.body);
         const { id } = req.params;
-        const { Name } = req.body;
+        const { LocationName } = req.body;
+
+        if (!LocationName)
+            return res.status(400).json({ message: 'LocationName is required.' });
 
         const existing = await executeQuery(
             `SELECT LocationName FROM Locations WHERE ID = @ID;`,
             [{ name: 'ID', value: id }]
         );
 
-        if (existing.length === 0)
+        if (!existing || existing.length === 0)
             return res.status(404).json({ message: 'Location not found.' });
 
-        const currentName = existing[0].LocationName;
-        if (currentName === Name)
+        const currentName = existing.recordset[0].LocationName;
+
+        if (currentName === LocationName)
             return res.status(200).json({ message: 'Location name is already up to date.' });
 
         await executeQuery(
-            `UPDATE Locations SET LocationName = @Name WHERE ID = @ID;`,
+            `UPDATE Locations SET LocationName = @LocationName WHERE ID = @ID;`,
             [
-                { name: 'LocationName', value: Name },
+                { name: 'LocationName', value: LocationName },
                 { name: 'ID', value: id }
             ]
         );
