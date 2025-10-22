@@ -30,12 +30,16 @@ export const getLocationsByID = async (req, res) => {
 export const addLocation = async (req, res) => {
     try {
         const { LocationName } = req.body;
-        
-        await executeQuery(
-            `
-            INSERT INTO Locations (LocationName) 
-            VALUES (@LocationName);
-            `,
+
+        const existing = await executeQuery(
+            `SELECT ID FROM Locations WHERE LOWER(LocationName) = LOWER(@LocationName);`,
+            [{ name: 'LocationName', value: LocationName }]
+        );
+
+        if (existing.length > 0)
+            return res.status(409).json({ message: 'Location already exists.' });
+
+        await executeQuery(`INSERT INTO Locations (LocationName) VALUES (@LocationName);`,
             [{ name: 'LocationName', value: LocationName }]
         );
 
@@ -43,5 +47,63 @@ export const addLocation = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(400).json({ message: 'Failed to add location.' });
+    }
+};
+
+// PUT /locations/:id
+export const updateLocation = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { LocationName } = req.body;
+
+        const existing = await executeQuery(
+            `SELECT LocationName FROM Locations WHERE ID = @ID;`,
+            [{ name: 'ID', value: id }]
+        );
+
+        if (existing.length === 0)
+            return res.status(404).json({ message: 'Location not found.' });
+
+        const currentName = existing[0].LocationName;
+        if (currentName === LocationName)
+            return res.status(200).json({ message: 'Location name is already up to date.' });
+
+        await executeQuery(
+            `UPDATE Locations SET LocationName = @LocationName WHERE ID = @ID;`,
+            [
+                { name: 'LocationName', value: LocationName },
+                { name: 'ID', value: id }
+            ]
+        );
+
+        res.status(200).json({ message: 'Location updated successfully!' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: error.message || error });
+    }
+};
+
+// DELETE /locations/:id
+export const deleteLocation = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const existing = await executeQuery(
+            `SELECT ID FROM Locations WHERE ID = @ID;`,
+            [{ name: 'ID', value: id }]
+        );
+
+        if (existing.length === 0)
+            return res.status(404).json({ message: 'Location not found.' });
+
+        await executeQuery(
+            `DELETE FROM Locations WHERE ID = @ID;`,
+            [{ name: 'ID', value: id }]
+        );
+
+        res.status(200).json({ message: 'Location deleted successfully!' });
+    } catch (error) {
+        console.error(error);
+        res.status(400).json({ message: 'Failed to delete location.' });
     }
 };
