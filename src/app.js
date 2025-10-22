@@ -20,7 +20,7 @@ const HOST = process.env.HOST || 'localhost';
 app.use('/auth', authRoutes);
 app.use('/keycards', keycardRoutes);
 app.use('/locations', locationsRoutes);
-app.use('/sensor/type', sensorTypesRoutes);
+app.use('/sensor', sensorTypesRoutes);
 app.use('/temperature', temperatureSensorRoutes);
 app.use('/units', unitsRoutes);
 app.use('/users', usersRoutes);
