@@ -18,10 +18,8 @@ app.use(express.json());
 const PORT = process.env.PORT || 4000;
 const HOST = process.env.HOST || 'localhost';
 
-app.use(cors({
-  origin: '*',
-  credentials: true,
-}));
+// CORS
+app.use(cors({ origin: '*', credentials: true }));
 
 app.use('/auth', authRoutes);
 app.use('/keycards', keycardRoutes);
