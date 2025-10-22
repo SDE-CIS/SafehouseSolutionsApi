@@ -9,7 +9,7 @@ const updateRefreshToken = async (userId, refreshToken) =>
         `UPDATE UserAccounts SET RefreshToken = @RefreshToken WHERE ID = @ID`,
         [
             { name: 'RefreshToken', value: refreshToken },
-            { name: 'ID', value: userId },
+            { name: 'ID', value: userId }
         ]
     );
 
@@ -18,6 +18,11 @@ export const authUser = async (req, res) => {
     const { Username, Password } = req.body;
 
     try {
+
+        if(!Username || !Password) {
+            return res.status(400).json({ message: 'Please provide username and password.' });
+        }
+
         const result = await executeQuery(
             `
             SELECT ID, Brugernavn, Adgangskode
@@ -32,12 +37,12 @@ export const authUser = async (req, res) => {
         const user = result.recordset[0];
 
         if (!user) {
-            return res.status(400).json({ message: 'Invalid username or password' });
+            return res.status(400).json({ success: false, message: 'User not found.' });
         }
 
         const isPasswordValid = await bcrypt.compare(Password, user.Adgangskode);
         if (!isPasswordValid) {
-            return res.status(400).json({ message: 'Invalid username or password' });
+            return res.status(400).json({ success: false, message: 'Invalid username or password.' });
         }
 
         const accessToken = generateToken(user.ID, user.Brugernavn, process.env.JWT_SECRET, '1h');
