@@ -25,3 +25,23 @@ export const getSensorTypesByID = async (req, res) => {
         res.status(500).json({ success: false, message: error.message || error });
     }
 };
+
+// POST /sensor/type
+export const addSensorType = async (req, res) => {
+    try {
+        const { SensorTypeName } = req.body;
+
+        await executeQuery(
+            `
+            INSERT INTO SensorType (SensorTypeName) 
+            VALUES (@SensorTypeName);
+            `,
+            [{ name: 'SensorTypeName', value: SensorTypeName }]
+        );
+
+        res.status(201).json({ message: 'Sensor type added successfully!' });
+    } catch (error) {
+        console.error(error);
+        res.status(400).json({ message: 'Failed to add sensor type.' });
+    }
+};
