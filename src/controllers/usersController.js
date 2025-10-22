@@ -1,5 +1,7 @@
 import { executeQuery } from '../utils/executeQuery.js';
 import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
+dotenv.config();
 
 // GET /users
 export const getUsers = async (req, res) => {
@@ -57,6 +59,7 @@ export const addUser = async (req, res) => {
             ]
         );
 
+
         res.status(201).json({ message: 'User added successfully!' });
     } catch (error) {
         console.error(error);
@@ -67,19 +70,19 @@ export const addUser = async (req, res) => {
 // POST /users/accounts
 export const addUserAccount = async (req, res) => {
     try {
-        const { Username, Password } = req.body;
+        const { Brugernavn, Adgangskode } = req.body;
 
-        if (!Username || !Password) {
+        if (!Brugernavn || !Adgangskode) {
             return res.status(400).json({ message: 'Username and password are required' });
         }
 
-        const hashedPassword = await bcrypt.hash(Password, parseInt(process.env.BCRYPT_SALT_ROUNDS || '10'));
+        const hashedPassword = await bcrypt.hash(Adgangskode, parseInt(process.env.BCRYPT_SALT_ROUNDS || '10'));
 
         await executeQuery(
-            `INSERT INTO Users (Username, Password) OUTPUT inserted.Id VALUES (@Username, @Password)`,
+            `INSERT INTO UserAccounts (Brugernavn, Adgangskode) VALUES (@Brugernavn, @Adgangskode)`,
             [
-                { name: 'Username', value: Username },
-                { name: 'Password', value: hashedPassword }
+                { name: 'Brugernavn', value: Brugernavn },
+                { name: 'Adgangskode', value: hashedPassword }
             ]
         );
 
