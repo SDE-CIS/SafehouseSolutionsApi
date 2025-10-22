@@ -36,11 +36,11 @@ export const authUser = async (req, res) => {
         const user = result.recordset[0];
 
         if (!user)
-            return res.status(400).json({ success: false, message: "This user doesn't exist." });
+            return res.status(401).json({ success: false, message: "This user doesn't exist." });
 
         const isPasswordValid = await bcrypt.compare(Password, user.Adgangskode);
         if (!isPasswordValid)
-            return res.status(400).json({ success: false, message: 'Invalid username or password.' });
+            return res.status(401).json({ success: false, message: 'Invalid username or password.' });
 
         const accessToken = generateToken(user.ID, user.Brugernavn, process.env.JWT_SECRET, '1h');
         const refreshToken = generateToken(user.ID, user.Brugernavn, process.env.REFRESH_TOKEN_SECRET, '1d');
@@ -61,7 +61,7 @@ export const authUser = async (req, res) => {
 export const refreshToken = async (req, res) => {
     const { refreshToken } = req.body;
     if (!refreshToken) {
-        return res.status(400).json({ message: 'Refresh token is required.' });
+        return res.status(401).json({ message: 'Refresh token is required.' });
     }
 
     try {
