@@ -4,6 +4,7 @@ const router = Router();
 
 router.get('/', getLocations);
 router.get('/:id', getLocationsByID);
+
 router.post('/', addLocation);
 
 export default router;

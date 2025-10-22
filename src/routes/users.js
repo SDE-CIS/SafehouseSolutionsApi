@@ -3,9 +3,10 @@ import { getUsers, getUsersByID, addUser, getUserAccounts, addUserAccount } from
 const router = Router();
 
 router.get('/', getUsers);
-router.get('/:id', getUsersByID);
-router.post('/', addUser);
 router.get('/accounts', getUserAccounts);
+router.get('/:id', getUsersByID);
+
+router.post('/', addUser);
 router.post('/accounts', addUserAccount);
 
 export default router;
