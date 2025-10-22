@@ -19,9 +19,8 @@ export const authUser = async (req, res) => {
 
     try {
 
-        if(!Username || !Password) {
+        if(!Username || !Password)
             return res.status(400).json({ message: 'Please provide username and password.' });
-        }
 
         const result = await executeQuery(
             `
@@ -36,14 +35,12 @@ export const authUser = async (req, res) => {
 
         const user = result.recordset[0];
 
-        if (!user) {
-            return res.status(400).json({ success: false, message: 'User not found.' });
-        }
+        if (!user)
+            return res.status(400).json({ success: false, message: "This user doesn't exist." });
 
         const isPasswordValid = await bcrypt.compare(Password, user.Adgangskode);
-        if (!isPasswordValid) {
+        if (!isPasswordValid)
             return res.status(400).json({ success: false, message: 'Invalid username or password.' });
-        }
 
         const accessToken = generateToken(user.ID, user.Brugernavn, process.env.JWT_SECRET, '1h');
         const refreshToken = generateToken(user.ID, user.Brugernavn, process.env.REFRESH_TOKEN_SECRET, '1d');
@@ -51,10 +48,12 @@ export const authUser = async (req, res) => {
         console.log('Refresh token update result:', updateResult);
 
         const simplifiedUser = { id: user.ID, username: user.Brugernavn };
-        res.json({ message: 'Login successful', accessToken, refreshToken, user: simplifiedUser });
+        res.json({ success: true, accessToken, refreshToken, user: simplifiedUser });
+
     } catch (error) {
         console.error('Authentication error:', error);
-        res.status(500).json({ message: 'Error during authentication' });
+        res.status(500).json({ success: false, message: 'Error during authentication: ' + error });
+
     }
 };
 
@@ -62,7 +61,7 @@ export const authUser = async (req, res) => {
 export const refreshToken = async (req, res) => {
     const { refreshToken } = req.body;
     if (!refreshToken) {
-        return res.status(400).json({ message: 'Refresh token is required' });
+        return res.status(400).json({ message: 'Refresh token is required.' });
     }
 
     try {
@@ -82,7 +81,7 @@ export const refreshToken = async (req, res) => {
 
         const user = result.recordset[0];
         if (!user) {
-            return res.status(401).json({ message: 'Invalid refresh token' });
+            return res.status(401).json({ message: 'Invalid refresh token.' });
         }
 
         const accessToken = generateToken(user.Id, user.Username, process.env.JWT_SECRET, '1h');
@@ -90,6 +89,6 @@ export const refreshToken = async (req, res) => {
 
     } catch (error) {
         console.error('Error during refresh token processing:', error);
-        res.status(401).json({ message: 'Invalid refresh token' });
+        res.status(401).json({ message: 'Error: ' + error });
     }
 };
