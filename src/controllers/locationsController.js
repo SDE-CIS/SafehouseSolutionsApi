@@ -30,13 +30,7 @@ export const getLocationsByID = async (req, res) => {
 export const addLocation = async (req, res) => {
     try {
         const { LocationName } = req.body;
-
-        if (!LocationName || typeof LocationName !== 'string') {
-            return res.status(400).json({ 
-                message: getMessage(messages.error.typeError) 
-            });
-        }
-
+        
         await executeQuery(
             `
             INSERT INTO Locations (LocationName) 
