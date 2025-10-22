@@ -53,8 +53,9 @@ export const addLocation = async (req, res) => {
 // PUT /locations/:id
 export const updateLocation = async (req, res) => {
     try {
+        console.log('Request body:', req.body);
         const { id } = req.params;
-        const { LocationName } = req.body;
+        const { Name } = req.body;
 
         const existing = await executeQuery(
             `SELECT LocationName FROM Locations WHERE ID = @ID;`,
@@ -65,13 +66,13 @@ export const updateLocation = async (req, res) => {
             return res.status(404).json({ message: 'Location not found.' });
 
         const currentName = existing[0].LocationName;
-        if (currentName === LocationName)
+        if (currentName === Name)
             return res.status(200).json({ message: 'Location name is already up to date.' });
 
         await executeQuery(
-            `UPDATE Locations SET LocationName = @LocationName WHERE ID = @ID;`,
+            `UPDATE Locations SET LocationName = @Name WHERE ID = @ID;`,
             [
-                { name: 'LocationName', value: LocationName },
+                { name: 'LocationName', value: Name },
                 { name: 'ID', value: id }
             ]
         );
