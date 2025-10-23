@@ -8,7 +8,7 @@ variables:
   build.ArtifactStagingDirectory: '$(Pipeline.Workspace)/artifacts'
   apiFolderPath: '\\10.130.56.55\E$\SafehouseSolutionsApi'
   serverIP: '10.130.56.55'
-  appSubdir: 'SafehouseSolutionsApi'
+  appSubdir: '.'
 
 steps:
 # 1) Node 20
