@@ -50,9 +50,50 @@ steps:
     targetPath: '$(Build.ArtifactStagingDirectory)/$(appSubdir)'
     artifact: 'SafehouseSolutionsApi'
 
-# 5) Clean target (keep .env)
+# 5) Put site offline (create app_offline.htm and wait for release)
 - task: PowerShell@2
-  displayName: 'Delete existing files on server (retain .env)'
+  displayName: 'Place app_offline.htm (take site offline)'
+  inputs:
+    targetType: 'inline'
+    script: |
+      $TargetPath = "$(apiFolderPath)"
+      $OfflineFile = Join-Path $TargetPath 'app_offline.htm'
+
+      if (-not (Test-Path $TargetPath)) {
+        Write-Error "Target directory does not exist or is inaccessible: $TargetPath"
+        exit 1
+      }
+
+      # Create/overwrite app_offline.htm
+      $content = @"
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Maintenance</title></head>
+<body><h1>Vi er tilbage om lidt</h1><p>Udrulning af en ny version…</p></body></html>
+"@
+      $content | Out-File -FilePath $OfflineFile -Encoding UTF8 -Force
+      Write-Host "Created $OfflineFile"
+
+      # Wait for iisnode / worker to release locks (max ~30s)
+      $maxWait = 30
+      for ($i=0; $i -lt $maxWait; $i++) {
+        $iisnodePath = Join-Path $TargetPath 'src\iisnode'
+        if (Test-Path $iisnodePath) {
+          try {
+            # Try a harmless operation to check lock status
+            Get-ChildItem -Path $iisnodePath -Force | Out-Null
+            Start-Sleep -Seconds 1
+          } catch {
+            Start-Sleep -Seconds 1
+          }
+        } else {
+          break
+        }
+      }
+      Write-Host "App should be offline now."
+
+# 6) Delete existing files (retain .env and app_offline.htm)
+- task: PowerShell@2
+  displayName: 'Delete existing files on server (retain .env & app_offline.htm)'
   inputs:
     targetType: 'inline'
     script: |
@@ -60,24 +101,39 @@ steps:
       if (Test-Path -Path $TargetPath) {
         try {
           Get-ChildItem -Path $TargetPath -Recurse -Force |
-            Where-Object { $_.PSIsContainer -or $_.Name -ne ".env" } |
+            Where-Object { $_.Name -notin @('.env','app_offline.htm') } |
             Remove-Item -Recurse -Force -ErrorAction Stop
-          Write-Host "Deleted all files (except .env) in $TargetPath"
+          Write-Host "Deleted all files except .env and app_offline.htm in $TargetPath"
         } catch {
           Write-Error "Failed to delete files in $TargetPath. Error: $($_.Exception.Message)"
           exit 1
         }
       } else {
-        Write-Host "Target directory does not exist or is inaccessible: $TargetPath"
+        Write-Error "Target directory does not exist or is inaccessible: $TargetPath"
+        exit 1
       }
 
-# 6) Copy staged artifact to server share
+# 7) Copy staged artifact to server share
 - task: WindowsMachineFileCopy@2
-  displayName: 'Copy API to IIS/Server share'
+  displayName: 'Copy API to server'
   inputs:
-    SourcePath: '$(Build.ArtifactStagingDirectory)/$(appSubdir)'
+    SourcePath: '$(Build.ArtifactStagingDirectory)/SafehouseSolutionsApi'
     MachineNames: '$(serverIP)'
     AdminUserName: '$(adminUsername)'
     AdminPassword: '$(adminPassword)'
     TargetPath: '$(apiFolderPath)'
     CleanTargetBeforeCopy: false
+
+# 8) Bring site online (remove app_offline.htm)
+- task: PowerShell@2
+  displayName: 'Remove app_offline.htm (bring site online)'
+  inputs:
+    targetType: 'inline'
+    script: |
+      $OfflineFile = Join-Path "$(apiFolderPath)" 'app_offline.htm'
+      if (Test-Path $OfflineFile) {
+        Remove-Item $OfflineFile -Force
+        Write-Host "Removed $OfflineFile"
+      } else {
+        Write-Host "No app_offline.htm to remove."
+      }
