@@ -1,0 +1,63 @@
+trigger:
+- master
+
+pool:
+  name: Production
+
+variables:
+  build.ArtifactStagingDirectory: '$(Pipeline.Workspace)/artifacts'
+  apiFolderPath: '\\10.130.56.55\E$\\SafehouseSolutionsApi'
+  serverIP: '10.130.56.55'
+
+steps:
+# Install Node.js
+- task: NodeTool@0
+  inputs:
+    versionSpec: '20.x'
+  displayName: 'Install Node.js'
+
+# Install dependencies
+- script: |
+    cd ./SafehouseSolutionsApi
+    npm ci
+  displayName: 'Install dependencies'
+
+# Publish build artifacts
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: '$(build.ArtifactStagingDirectory)'
+    artifact: 'SafehouseSolutionsApi'
+  displayName: 'Publish API artifacts'
+
+# Delete existing files on IIS server
+- task: PowerShell@2
+  inputs:
+    targetType: 'inline'
+    script: |
+      $TargetPath = "\\10.130.56.55\E$\SafehouseSolutionsApi"
+
+      if (Test-Path -Path $TargetPath) {
+        try {
+          Get-ChildItem -Path $TargetPath -Recurse -Force |
+            Where-Object { $_.Name -ne ".env" } |
+            Remove-Item -Recurse -Force -ErrorAction Stop
+          Write-Host "Deleted all files except .env in $TargetPath"
+        } catch {
+          Write-Error "Failed to delete files in $TargetPath. Error: $($_.Exception.Message)"
+          exit 1
+        }
+      } else {
+        Write-Host "Target directory does not exist or is inaccessible."
+      }
+  displayName: 'Delete existing artifacts on IIS server (retain .env)'
+
+# Deploy new artifacts to IIS server
+- task: WindowsMachineFileCopy@2
+  inputs:
+    SourcePath: '$(Build.ArtifactStagingDirectory)'
+    MachineNames: '$(serverIP)'
+    AdminUserName: '$(adminUsername)'
+    AdminPassword: '$(adminPassword)'
+    TargetPath: '$(apiFolderPath)'
+    CleanTargetBeforeCopy: false
+  displayName: 'Copy API to IIS Server'
