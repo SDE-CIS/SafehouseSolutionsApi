@@ -64,35 +64,30 @@ steps:
     artifact: 'SafehouseSolutionsApi'
 
 - task: PowerShell@2
-  displayName: 'Place app_offline.htm (take site offline)'
+  displayName: 'Stop IIS App Pool on server'
   inputs:
     targetType: 'inline'
     script: |
-      $TargetPath = "$(apiFolderPath)"
-      $OfflineFile = Join-Path $TargetPath 'app_offline.htm'
+      $server = '$(serverIP)'
+      $pool   = 'SafehouseSolutionsApiAppPool'   # <-- set your actual app pool name
 
-      if (-not (Test-Path $TargetPath)) {
-        Write-Error "Target directory does not exist or is inaccessible: $TargetPath"
-        exit 1
+      $sec = ConvertTo-SecureString '$(adminPassword)' -AsPlainText -Force
+      $creds = New-Object System.Management.Automation.PSCredential('$(adminUsername)', $sec)
+
+      $session = New-PSSession -ComputerName $server -Credential $creds -ErrorAction Stop
+      try {
+        Invoke-Command -Session $session -ScriptBlock {
+          Import-Module WebAdministration
+          if ((Get-WebAppPoolState -Name $using:pool).Value -ne 'Stopped') {
+            Stop-WebAppPool -Name $using:pool
+          }
+          # Give IIS a moment to release file locks
+          Start-Sleep -Seconds 5
+        }
+        Write-Host "Stopped IIS app pool '$pool' on $server"
+      } finally {
+        Remove-PSSession $session
       }
-
-      $content = @'
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Maintenance</title>
-      </head>
-      <body>
-        <h1>We’ll be right back</h1>
-        <p>Deploying a new version…</p>
-      </body>
-      </html>
-      '@
-
-            Set-Content -Path $OfflineFile -Value $content -Encoding UTF8
-            Write-Host "Created $OfflineFile"
-            Start-Sleep -Seconds 3
 
 - task: PowerShell@2
   displayName: 'Delete existing files on server (retain .env & app_offline.htm)'
@@ -126,14 +121,25 @@ steps:
     CleanTargetBeforeCopy: false
 
 - task: PowerShell@2
-  displayName: 'Remove app_offline.htm (bring site online)'
+  displayName: 'Start IIS App Pool on server'
   inputs:
     targetType: 'inline'
     script: |
-      $OfflineFile = Join-Path "$(apiFolderPath)" 'app_offline.htm'
-      if (Test-Path $OfflineFile) {
-        Remove-Item $OfflineFile -Force
-        Write-Host "Removed $OfflineFile"
-      } else {
-        Write-Host "No app_offline.htm to remove."
+      $server = '$(serverIP)'
+      $pool   = 'SafehouseSolutionsApi'
+
+      $sec = ConvertTo-SecureString '$(adminPassword)' -AsPlainText -Force
+      $creds = New-Object System.Management.Automation.PSCredential('$(adminUsername)', $sec)
+
+      $session = New-PSSession -ComputerName $server -Credential $creds -ErrorAction Stop
+      try {
+        Invoke-Command -Session $session -ScriptBlock {
+          Import-Module WebAdministration
+          if ((Get-WebAppPoolState -Name $using:pool).Value -ne 'Started') {
+            Start-WebAppPool -Name $using:pool
+          }
+        }
+        Write-Host "Started IIS app pool '$pool' on $server"
+      } finally {
+        Remove-PSSession $session
       }
