@@ -11,46 +11,58 @@ variables:
   appSubdir: '.'
 
 steps:
-# 1) Node 20
+- checkout: self
+  clean: true
+
+- task: PowerShell@2
+  displayName: 'Diag: list project folder'
+  inputs:
+    targetType: 'inline'
+    script: |
+      Write-Host "Build.SourcesDirectory = $(Build.SourcesDirectory)"
+      Write-Host "Using appSubdir = $(appSubdir)"
+      $p = Join-Path '$(Build.SourcesDirectory)' '$(appSubdir)'
+      Write-Host "Resolved project path: $p"
+      if (-not (Test-Path $p)) {
+        Write-Error "Project path not found: $p"
+        exit 1
+      }
+      Get-ChildItem -Path $p -Force | Select-Object FullName | Out-String -Width 4096
+
 - task: NodeTool@0
+  displayName: 'Install Node.js 20'
   inputs:
     versionSpec: '20.x'
-  displayName: 'Install Node.js 20'
 
-# 2) Install deps (production only)
-- script: |
-    cd "$(Build.SourcesDirectory)\$(appSubdir)"
-    npm ci --omit=dev
-    REM If you transpile TS -> JS, uncomment next line:
-    REM npm run build
-  displayName: 'Install production dependencies'
+- script: npm ci --omit=dev
+  displayName: 'Install dependencies (production)'
+  workingDirectory: '$(Build.SourcesDirectory)/$(appSubdir)'
 
-# 3) Stage files for artifact
-#    Include package.json, lockfile, node_modules, and your app files.
-#    If you build to /dist, stage /dist instead of /src.
 - task: CopyFiles@2
-  displayName: 'Stage app into ArtifactStagingDirectory'
+  displayName: 'Stage app to ArtifactStagingDirectory'
   inputs:
     SourceFolder: '$(Build.SourcesDirectory)/$(appSubdir)'
     Contents: |
       package.json
       package-lock.json
       node_modules/**/*
-      *.js
       src/**/*
+      dist/**/*
+      build/**/*
       public/**/*
+      server.js
       app.js
+      ecosystem.config.js
+      PM2.config.js
       !.env
-    TargetFolder: '$(Build.ArtifactStagingDirectory)/$(appSubdir)'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)/SafehouseSolutionsApi'
 
-# 4) Publish the staged artifact
 - task: PublishPipelineArtifact@1
   displayName: 'Publish API artifact'
   inputs:
-    targetPath: '$(Build.ArtifactStagingDirectory)/$(appSubdir)'
+    targetPath: '$(Build.ArtifactStagingDirectory)/SafehouseSolutionsApi'
     artifact: 'SafehouseSolutionsApi'
 
-# 5) Put site offline (create app_offline.htm and wait for release)
 - task: PowerShell@2
   displayName: 'Place app_offline.htm (take site offline)'
   inputs:
@@ -64,34 +76,11 @@ steps:
         exit 1
       }
 
-      # Create/overwrite app_offline.htm
-      $content = @"
-<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Maintenance</title></head>
-<body><h1>Vi er tilbage om lidt</h1><p>Udrulning af en ny version…</p></body></html>
-"@
+      $content = @"<!DOCTYPE html><html><head><meta charset="utf-8"><title>Maintenance</title></head><body><h1>We’ll be right back</h1><p>Deploying a new version…</p></body></html>"@
       $content | Out-File -FilePath $OfflineFile -Encoding UTF8 -Force
       Write-Host "Created $OfflineFile"
+      Start-Sleep -Seconds 3
 
-      # Wait for iisnode / worker to release locks (max ~30s)
-      $maxWait = 30
-      for ($i=0; $i -lt $maxWait; $i++) {
-        $iisnodePath = Join-Path $TargetPath 'src\iisnode'
-        if (Test-Path $iisnodePath) {
-          try {
-            # Try a harmless operation to check lock status
-            Get-ChildItem -Path $iisnodePath -Force | Out-Null
-            Start-Sleep -Seconds 1
-          } catch {
-            Start-Sleep -Seconds 1
-          }
-        } else {
-          break
-        }
-      }
-      Write-Host "App should be offline now."
-
-# 6) Delete existing files (retain .env and app_offline.htm)
 - task: PowerShell@2
   displayName: 'Delete existing files on server (retain .env & app_offline.htm)'
   inputs:
@@ -113,9 +102,8 @@ steps:
         exit 1
       }
 
-# 7) Copy staged artifact to server share
 - task: WindowsMachineFileCopy@2
-  displayName: 'Copy API to server'
+  displayName: 'Copy API to server share'
   inputs:
     SourcePath: '$(Build.ArtifactStagingDirectory)/SafehouseSolutionsApi'
     MachineNames: '$(serverIP)'
@@ -124,7 +112,6 @@ steps:
     TargetPath: '$(apiFolderPath)'
     CleanTargetBeforeCopy: false
 
-# 8) Bring site online (remove app_offline.htm)
 - task: PowerShell@2
   displayName: 'Remove app_offline.htm (bring site online)'
   inputs:
