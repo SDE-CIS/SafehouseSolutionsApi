@@ -1,5 +1,7 @@
 import { executeQuery } from '../utils/executeQuery.js';
 
+// ---- KEYCARDS
+
 // GET /keycards
 export const getKeycards = async (req, res) => {
     try {
@@ -37,6 +39,39 @@ export const getKeycardById = async (req, res) => {
         res.status(500).json({ success: false, message: error.message || error });
     }
 };
+
+// POST /keycards
+export const addKeycard = async (req, res) => {
+    try {
+        const { StatusName, StatusDescription } = req.body;
+
+        if (!StatusName || !StatusDescription)
+            return res.status(400).json({ message: 'Please provide both StatusName and StatusDescription.' });
+
+        const existing = await executeQuery(
+            `SELECT ID FROM StatusTypes WHERE LOWER(StatusName) = LOWER(@StatusName);`,
+            [{ name: 'StatusName', value: StatusName.trim() }]
+        );
+
+        if (Array.isArray(existing.recordset) && existing.recordset.length > 0)
+            return res.status(409).json({ message: 'This keycard status already exists.' });
+
+        await executeQuery(
+            `INSERT INTO StatusTypes (StatusName, StatusDescription) VALUES (@StatusName, StatusDescription);`,
+            [
+                { name: 'StatusName', value: StatusName.trim() },
+                { name: 'StatusDescription', value: StatusDescription.trim() }
+            ]
+        );
+
+        res.status(201).json({ message: 'Keycard status added successfully!' });
+    } catch (error) {
+        console.error(error);
+        res.status(400).json({ message: 'Failed to add keycard status.' });
+    }
+};
+
+// ---- KEYCARD ACCESS LOGS 
 
 // GET /keycards/logs
 export const getAccessLogs = async (req, res) => {
