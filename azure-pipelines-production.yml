@@ -14,21 +14,6 @@ steps:
 - checkout: self
   clean: true
 
-- task: PowerShell@2
-  displayName: 'Diag: list project folder'
-  inputs:
-    targetType: 'inline'
-    script: |
-      Write-Host "Build.SourcesDirectory = $(Build.SourcesDirectory)"
-      Write-Host "Using appSubdir = $(appSubdir)"
-      $p = Join-Path '$(Build.SourcesDirectory)' '$(appSubdir)'
-      Write-Host "Resolved project path: $p"
-      if (-not (Test-Path $p)) {
-        Write-Error "Project path not found: $p"
-        exit 1
-      }
-      Get-ChildItem -Path $p -Force | Select-Object FullName | Out-String -Width 4096
-
 - task: NodeTool@0
   displayName: 'Install Node.js 20'
   inputs:
@@ -58,88 +43,7 @@ steps:
     TargetFolder: '$(Build.ArtifactStagingDirectory)/SafehouseSolutionsApi'
 
 - task: PublishPipelineArtifact@1
-  displayName: 'Publish API artifact'
+  displayName: 'Publish artifact'
   inputs:
     targetPath: '$(Build.ArtifactStagingDirectory)/SafehouseSolutionsApi'
     artifact: 'SafehouseSolutionsApi'
-
-- task: PowerShell@2
-  displayName: 'Stop IIS App Pool on server'
-  inputs:
-    targetType: 'inline'
-    script: |
-      $server = '$(serverIP)'
-      $pool   = 'SafehouseSolutionsApiAppPool'   # <-- set your actual app pool name
-
-      $sec = ConvertTo-SecureString '$(adminPassword)' -AsPlainText -Force
-      $creds = New-Object System.Management.Automation.PSCredential('$(adminUsername)', $sec)
-
-      $session = New-PSSession -ComputerName $server -Credential $creds -ErrorAction Stop
-      try {
-        Invoke-Command -Session $session -ScriptBlock {
-          Import-Module WebAdministration
-          if ((Get-WebAppPoolState -Name $using:pool).Value -ne 'Stopped') {
-            Stop-WebAppPool -Name $using:pool
-          }
-          # Give IIS a moment to release file locks
-          Start-Sleep -Seconds 5
-        }
-        Write-Host "Stopped IIS app pool '$pool' on $server"
-      } finally {
-        Remove-PSSession $session
-      }
-
-- task: PowerShell@2
-  displayName: 'Delete existing files on server (retain .env & app_offline.htm)'
-  inputs:
-    targetType: 'inline'
-    script: |
-      $TargetPath = "$(apiFolderPath)"
-      if (Test-Path -Path $TargetPath) {
-        try {
-          Get-ChildItem -Path $TargetPath -Recurse -Force |
-            Where-Object { $_.Name -notin @('.env','app_offline.htm') } |
-            Remove-Item -Recurse -Force -ErrorAction Stop
-          Write-Host "Deleted all files except .env and app_offline.htm in $TargetPath"
-        } catch {
-          Write-Error "Failed to delete files in $TargetPath. Error: $($_.Exception.Message)"
-          exit 1
-        }
-      } else {
-        Write-Error "Target directory does not exist or is inaccessible: $TargetPath"
-        exit 1
-      }
-
-- task: WindowsMachineFileCopy@2
-  displayName: 'Copy API to server share'
-  inputs:
-    SourcePath: '$(Build.ArtifactStagingDirectory)/SafehouseSolutionsApi'
-    MachineNames: '$(serverIP)'
-    AdminUserName: '$(adminUsername)'
-    AdminPassword: '$(adminPassword)'
-    TargetPath: '$(apiFolderPath)'
-    CleanTargetBeforeCopy: false
-
-- task: PowerShell@2
-  displayName: 'Start IIS App Pool on server'
-  inputs:
-    targetType: 'inline'
-    script: |
-      $server = '$(serverIP)'
-      $pool   = 'SafehouseSolutionsApi'
-
-      $sec = ConvertTo-SecureString '$(adminPassword)' -AsPlainText -Force
-      $creds = New-Object System.Management.Automation.PSCredential('$(adminUsername)', $sec)
-
-      $session = New-PSSession -ComputerName $server -Credential $creds -ErrorAction Stop
-      try {
-        Invoke-Command -Session $session -ScriptBlock {
-          Import-Module WebAdministration
-          if ((Get-WebAppPoolState -Name $using:pool).Value -ne 'Started') {
-            Start-WebAppPool -Name $using:pool
-          }
-        }
-        Write-Host "Started IIS app pool '$pool' on $server"
-      } finally {
-        Remove-PSSession $session
-      }
