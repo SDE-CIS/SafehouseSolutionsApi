@@ -63,18 +63,28 @@ export const updateLocation = async (req, res) => {
         if (!LocationName)
             return res.status(400).json({ message: 'LocationName is required.' });
 
-        const existing = await executeQuery(
-            `SELECT LocationName FROM Locations WHERE ID = @ID;`,
-            [{ name: 'ID', value: id }]
+        const result = await executeQuery(
+            `
+            SELECT
+                (SELECT LocationName FROM Locations WHERE ID = @ID) AS CurrentName,
+                (SELECT COUNT(*) FROM Locations WHERE LocationName = @LocationName AND ID != @ID) AS DuplicateCount
+            `,
+            [
+                { name: 'ID', value: id },
+                { name: 'LocationName', value: LocationName }
+            ]
         );
 
-        if (!existing || existing.length === 0)
-            return res.status(404).json({ message: 'Location not found.' });
+        const record = result.recordset[0];
 
-        const currentName = existing.recordset[0].LocationName;
+        if (!record.CurrentName)
+            return res.status(404).json({ message: "Location doesn't exist." });
 
-        if (currentName === LocationName)
+        if (record.CurrentName === LocationName)
             return res.status(200).json({ message: 'Location name is already up to date.' });
+
+        if (record.DuplicateCount > 0)
+            return res.status(409).json({ message: 'This location exists already.' });
 
         await executeQuery(
             `UPDATE Locations SET LocationName = @LocationName WHERE ID = @ID;`,
