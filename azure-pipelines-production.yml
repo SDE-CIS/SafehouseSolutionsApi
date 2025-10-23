@@ -76,10 +76,23 @@ steps:
         exit 1
       }
 
-      $content = @"<!DOCTYPE html><html><head><meta charset="utf-8"><title>Maintenance</title></head><body><h1>We’ll be right back</h1><p>Deploying a new version…</p></body></html>"@
-      $content | Out-File -FilePath $OfflineFile -Encoding UTF8 -Force
-      Write-Host "Created $OfflineFile"
-      Start-Sleep -Seconds 3
+      $content = @'
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Maintenance</title>
+      </head>
+      <body>
+        <h1>We’ll be right back</h1>
+        <p>Deploying a new version…</p>
+      </body>
+      </html>
+      '@
+
+            Set-Content -Path $OfflineFile -Value $content -Encoding UTF8
+            Write-Host "Created $OfflineFile"
+            Start-Sleep -Seconds 3
 
 - task: PowerShell@2
   displayName: 'Delete existing files on server (retain .env & app_offline.htm)'
