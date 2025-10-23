@@ -6,7 +6,7 @@ const generateToken = (userId, username, secret, expiresIn) => jwt.sign({ id: us
 
 const updateRefreshToken = async (userId, refreshToken) =>
     executeQuery(
-        `UPDATE UserAccounts SET RefreshToken = @RefreshToken WHERE ID = @ID`,
+        `UPDATE Users SET RefreshToken = @RefreshToken WHERE ID = @ID`,
         [
             { name: 'RefreshToken', value: refreshToken },
             { name: 'ID', value: userId }
@@ -23,11 +23,7 @@ export const authUser = async (req, res) => {
             return res.status(400).json({ message: 'Please provide username and password.' });
 
         const result = await executeQuery(
-            `
-            SELECT ID, Brugernavn, Adgangskode
-            FROM UserAccounts
-            WHERE Brugernavn = @Brugernavn
-            `,
+            `SELECT * FROM Users WHERE Brugernavn = @Brugernavn`,
             [
                 { name: 'Brugernavn', value: Username },
             ]
@@ -47,13 +43,12 @@ export const authUser = async (req, res) => {
         const updateResult = await updateRefreshToken(user.ID, refreshToken);
         console.log('Refresh token update result:', updateResult);
 
-        const simplifiedUser = { id: user.ID, username: user.Brugernavn };
+        const simplifiedUser = { id: user.ID, username: user.Brugernavn, firstName: user.FirstName, lastName: user.LastName, phoneNumber: user.PhoneNumber || "", email: user.Email };
         res.json({ success: true, accessToken, refreshToken, user: simplifiedUser });
 
     } catch (error) {
         console.error('Authentication error:', error);
         res.status(500).json({ success: false, message: 'Error during authentication: ' + error });
-
     }
 };
 
@@ -70,7 +65,7 @@ export const refreshToken = async (req, res) => {
         const result = await executeQuery(
             `
             SELECT ID, Brugernavn, Adgangskode
-            FROM UserAccounts
+            FROM Users
             WHERE ID = @ID AND RefreshToken = @RefreshToken
             `,
             [
@@ -86,7 +81,6 @@ export const refreshToken = async (req, res) => {
 
         const accessToken = generateToken(user.Id, user.Username, process.env.JWT_SECRET, '1h');
         res.status(200).json({ message: 'Token refreshed successfully', accessToken });
-
     } catch (error) {
         console.error('Error during refresh token processing:', error);
         res.status(401).json({ message: 'Error: ' + error });
