@@ -6,58 +6,78 @@ pool:
 
 variables:
   build.ArtifactStagingDirectory: '$(Pipeline.Workspace)/artifacts'
-  apiFolderPath: '\\10.130.56.55\E$\\SafehouseSolutionsApi'
+  apiFolderPath: '\\10.130.56.55\E$\SafehouseSolutionsApi'
   serverIP: '10.130.56.55'
+  appSubdir: 'SafehouseSolutionsApi'
 
 steps:
-# Install Node.js
+# 1) Node 20
 - task: NodeTool@0
   inputs:
     versionSpec: '20.x'
-  displayName: 'Install Node.js'
+  displayName: 'Install Node.js 20'
 
-# Install dependencies
+# 2) Install deps (production only)
 - script: |
-    cd ./SafehouseSolutionsApi
-    npm ci
-  displayName: 'Install dependencies'
+    cd "$(Build.SourcesDirectory)\$(appSubdir)"
+    npm ci --omit=dev
+    REM If you transpile TS -> JS, uncomment next line:
+    REM npm run build
+  displayName: 'Install production dependencies'
 
-# Publish build artifacts
-- task: PublishPipelineArtifact@1
+# 3) Stage files for artifact
+#    Include package.json, lockfile, node_modules, and your app files.
+#    If you build to /dist, stage /dist instead of /src.
+- task: CopyFiles@2
+  displayName: 'Stage app into ArtifactStagingDirectory'
   inputs:
-    targetPath: '$(build.ArtifactStagingDirectory)'
-    artifact: 'SafehouseSolutionsApi'
-  displayName: 'Publish API artifacts'
+    SourceFolder: '$(Build.SourcesDirectory)/$(appSubdir)'
+    Contents: |
+      package.json
+      package-lock.json
+      node_modules/**/*
+      *.js
+      src/**/*
+      public/**/*
+      app.js
+      !.env
+    TargetFolder: '$(Build.ArtifactStagingDirectory)/$(appSubdir)'
 
-# Delete existing files on IIS server
+# 4) Publish the staged artifact
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish API artifact'
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)/$(appSubdir)'
+    artifact: 'SafehouseSolutionsApi'
+
+# 5) Clean target (keep .env)
 - task: PowerShell@2
+  displayName: 'Delete existing files on server (retain .env)'
   inputs:
     targetType: 'inline'
     script: |
-      $TargetPath = "\\10.130.56.55\E$\SafehouseSolutionsApi"
-
+      $TargetPath = "$(apiFolderPath)"
       if (Test-Path -Path $TargetPath) {
         try {
           Get-ChildItem -Path $TargetPath -Recurse -Force |
-            Where-Object { $_.Name -ne ".env" } |
+            Where-Object { $_.PSIsContainer -or $_.Name -ne ".env" } |
             Remove-Item -Recurse -Force -ErrorAction Stop
-          Write-Host "Deleted all files except .env in $TargetPath"
+          Write-Host "Deleted all files (except .env) in $TargetPath"
         } catch {
           Write-Error "Failed to delete files in $TargetPath. Error: $($_.Exception.Message)"
           exit 1
         }
       } else {
-        Write-Host "Target directory does not exist or is inaccessible."
+        Write-Host "Target directory does not exist or is inaccessible: $TargetPath"
       }
-  displayName: 'Delete existing artifacts on IIS server (retain .env)'
 
-# Deploy new artifacts to IIS server
+# 6) Copy staged artifact to server share
 - task: WindowsMachineFileCopy@2
+  displayName: 'Copy API to IIS/Server share'
   inputs:
-    SourcePath: '$(Build.ArtifactStagingDirectory)'
+    SourcePath: '$(Build.ArtifactStagingDirectory)/$(appSubdir)'
     MachineNames: '$(serverIP)'
     AdminUserName: '$(adminUsername)'
     AdminPassword: '$(adminPassword)'
     TargetPath: '$(apiFolderPath)'
     CleanTargetBeforeCopy: false
-  displayName: 'Copy API to IIS Server'
