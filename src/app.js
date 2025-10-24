@@ -30,7 +30,7 @@ app.use('/units', unitsRoutes);
 app.use('/users', usersRoutes);
 
 app.get('/', (req, res) => {
-  res.send('Hello, World!');
+  res.send('Safehouse Solutions API is running');
 });
 
 app.listen(PORT, () => {
