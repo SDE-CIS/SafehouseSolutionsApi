@@ -11,73 +11,39 @@ variables:
   appSubdir: '.'
 
 steps:
-# 1) Node 20
+- checkout: self
+  clean: true
+
 - task: NodeTool@0
+  displayName: 'Install Node.js 20'
   inputs:
     versionSpec: '20.x'
-  displayName: 'Install Node.js 20'
 
-# 2) Install deps (production only)
-- script: |
-    cd "$(Build.SourcesDirectory)\$(appSubdir)"
-    npm ci --omit=dev
-    REM If you transpile TS -> JS, uncomment next line:
-    REM npm run build
-  displayName: 'Install production dependencies'
+- script: npm ci --omit=dev
+  displayName: 'Install dependencies (production)'
+  workingDirectory: '$(Build.SourcesDirectory)/$(appSubdir)'
 
-# 3) Stage files for artifact
-#    Include package.json, lockfile, node_modules, and your app files.
-#    If you build to /dist, stage /dist instead of /src.
 - task: CopyFiles@2
-  displayName: 'Stage app into ArtifactStagingDirectory'
+  displayName: 'Stage app to ArtifactStagingDirectory'
   inputs:
     SourceFolder: '$(Build.SourcesDirectory)/$(appSubdir)'
     Contents: |
       package.json
       package-lock.json
       node_modules/**/*
-      *.js
       src/**/*
+      dist/**/*
+      build/**/*
       public/**/*
+      server.js
       app.js
+      ecosystem.config.js
+      PM2.config.js
       !.env
-    TargetFolder: '$(Build.ArtifactStagingDirectory)/$(appSubdir)'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)/SafehouseSolutionsApi'
 
-# 4) Publish the staged artifact
 - task: PublishPipelineArtifact@1
-  displayName: 'Publish API artifact'
+  displayName: 'Publish artifact'
   inputs:
-    targetPath: '$(Build.ArtifactStagingDirectory)/$(appSubdir)'
+    targetPath: '$(Build.ArtifactStagingDirectory)/SafehouseSolutionsApi'
     artifact: 'SafehouseSolutionsApi'
-
-# 5) Clean target (keep .env)
-- task: PowerShell@2
-  displayName: 'Delete existing files on server (retain .env)'
-  inputs:
-    targetType: 'inline'
-    script: |
-      $TargetPath = "$(apiFolderPath)"
-      if (Test-Path -Path $TargetPath) {
-        try {
-          Get-ChildItem -Path $TargetPath -Recurse -Force |
-            Where-Object { $_.PSIsContainer -or $_.Name -ne ".env" } |
-            Remove-Item -Recurse -Force -ErrorAction Stop
-          Write-Host "Deleted all files (except .env) in $TargetPath"
-        } catch {
-          Write-Error "Failed to delete files in $TargetPath. Error: $($_.Exception.Message)"
-          exit 1
-        }
-      } else {
-        Write-Host "Target directory does not exist or is inaccessible: $TargetPath"
-      }
-
-# 6) Copy staged artifact to server share
-- task: WindowsMachineFileCopy@2
-  displayName: 'Copy API to IIS/Server share'
-  inputs:
-    SourcePath: '$(Build.ArtifactStagingDirectory)/$(appSubdir)'
-    MachineNames: '$(serverIP)'
-    AdminUserName: '$(adminUsername)'
-    AdminPassword: '$(adminPassword)'
-    TargetPath: '$(apiFolderPath)'
-    CleanTargetBeforeCopy: false
