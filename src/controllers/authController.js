@@ -23,9 +23,9 @@ export const authUser = async (req, res) => {
             return res.status(400).json({ message: 'Please provide username and password.' });
 
         const result = await executeQuery(
-            `SELECT * FROM Users WHERE Brugernavn = @Brugernavn`,
+            `SELECT * FROM Users WHERE Username = @Username`,
             [
-                { name: 'Brugernavn', value: Username },
+                { name: 'Username', value: Username },
             ]
         );
 
@@ -34,16 +34,16 @@ export const authUser = async (req, res) => {
         if (!user)
             return res.status(401).json({ success: false, message: "This user doesn't exist." });
 
-        const isPasswordValid = await bcrypt.compare(Password, user.Adgangskode);
+        const isPasswordValid = await bcrypt.compare(Password, user.Password);
         if (!isPasswordValid)
             return res.status(401).json({ success: false, message: 'Invalid username or password.' });
 
-        const accessToken = generateToken(user.ID, user.Brugernavn, process.env.JWT_SECRET, '1h');
-        const refreshToken = generateToken(user.ID, user.Brugernavn, process.env.REFRESH_TOKEN_SECRET, '1d');
+        const accessToken = generateToken(user.ID, user.Username, process.env.JWT_SECRET, '1h');
+        const refreshToken = generateToken(user.ID, user.Username, process.env.REFRESH_TOKEN_SECRET, '1d');
         const updateResult = await updateRefreshToken(user.ID, refreshToken);
         console.log('Refresh token update result:', updateResult);
 
-        const simplifiedUser = { id: user.ID, username: user.Brugernavn, firstName: user.FirstName, lastName: user.LastName, phoneNumber: user.PhoneNumber || "", email: user.Email };
+        const simplifiedUser = { id: user.ID, username: user.Username, firstName: user.FirstName, lastName: user.LastName, phoneNumber: user.PhoneNumber || "", email: user.Email };
         res.json({ success: true, accessToken, refreshToken, user: simplifiedUser });
 
     } catch (error) {
@@ -64,7 +64,7 @@ export const refreshToken = async (req, res) => {
 
         const result = await executeQuery(
             `
-            SELECT ID, Brugernavn, Adgangskode
+            SELECT ID, Username, Password
             FROM Users
             WHERE ID = @ID AND RefreshToken = @RefreshToken
             `,

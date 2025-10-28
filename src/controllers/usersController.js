@@ -32,30 +32,30 @@ export const getUsersByID = async (req, res) => {
 // POST /users
 export const addUser = async (req, res) => {
     try {
-        const { FirstName, LastName, PhoneNumber, Email, Brugernavn, Adgangskode } = req.body;
+        const { FirstName, LastName, PhoneNumber, Email, Username, Password } = req.body;
 
         const existingUser = await executeQuery(
-            `SELECT COUNT(*) AS count FROM Users WHERE Brugernavn = @Brugernavn`,
-            [{ name: 'Brugernavn', value: Brugernavn }]
+            `SELECT COUNT(*) AS count FROM Users WHERE Username = @Username`,
+            [{ name: 'Username', value: Username }]
         );
 
         if (existingUser.recordset[0].count > 0)
             return res.status(409).json({ message: 'Username already exists.' });
 
-        const hashedPassword = await bcrypt.hash(Adgangskode, parseInt(process.env.BCRYPT_SALT_ROUNDS || '10'));
+        const hashedPassword = await bcrypt.hash(Password, parseInt(process.env.BCRYPT_SALT_ROUNDS || '10'));
 
         await executeQuery(
             `
-            INSERT INTO Users (FirstName, LastName, PhoneNumber, Email, Brugernavn, Adgangskode)
-            VALUES (@FirstName, @LastName, @PhoneNumber, @Email, @Brugernavn, @Adgangskode);
+            INSERT INTO Users (FirstName, LastName, PhoneNumber, Email, Username, Password)
+            VALUES (@FirstName, @LastName, @PhoneNumber, @Email, @Username, @Password);
             `,
             [
                 { name: 'FirstName', value: FirstName },
                 { name: 'LastName', value: LastName },
                 { name: 'PhoneNumber', value: PhoneNumber || "" },
                 { name: 'Email', value: Email },
-                { name: 'Brugernavn', value: Brugernavn },
-                { name: 'Adgangskode', value: hashedPassword }
+                { name: 'Username', value: Username },
+                { name: 'Password', value: hashedPassword }
             ]
         );
 
