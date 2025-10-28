@@ -32,7 +32,7 @@ export const getKeycardById = async (req, res) => {
         `;
 
         const result = await executeQuery(keycardQuery, [{ name: 'ID', value: id }]);
-        if (result.recordset.length === 0) { return res.status(404).json({ success: false, message: 'Unit not found' }); }
+        if (result.recordset.length === 0) { return res.status(404).json({ success: false, message: 'Keycard not found' }); }
         res.status(200).json({ success: true, data: result.recordset[0] });
     } catch (error) {
         console.error('Error fetching unit by ID:', error);
@@ -43,31 +43,123 @@ export const getKeycardById = async (req, res) => {
 // POST /keycards
 export const addKeycard = async (req, res) => {
     try {
-        const { StatusName, StatusDescription } = req.body;
+        const { RfidTag, ExpirationDate, UserID, StatusTypeID } = req.body;
 
-        if (!StatusName || !StatusDescription)
-            return res.status(400).json({ message: 'Please provide both StatusName and StatusDescription.' });
+        if (!RfidTag)
+            return res.status(400).json({ success: false, message: 'Please provide an RfidTag.'});
 
         const existing = await executeQuery(
-            `SELECT ID FROM StatusTypes WHERE LOWER(StatusName) = LOWER(@StatusName);`,
-            [{ name: 'StatusName', value: StatusName.trim() }]
+            `SELECT ID FROM Keycards WHERE RfidTag = @RfidTag;`,
+            [{ name: 'RfidTag', value: RfidTag.trim() }]
         );
 
-        if (Array.isArray(existing.recordset) && existing.recordset.length > 0)
-            return res.status(409).json({ message: 'This keycard status already exists.' });
+        if (existing.recordset.length > 0)
+            return res.status(409).json({ success: false, message: 'A keycard with this RfidTag already exists.' });
+
+        const insertQuery = `
+            INSERT INTO Keycards (RfidTag, ExpirationDate, UserID, StatusTypeID, IssueDate)
+            VALUES (@RfidTag, @ExpirationDate, @UserID, @StatusTypeID, GETDATE());
+        `;
+
+        await executeQuery(insertQuery, [
+            { name: 'RfidTag', value: RfidTag.trim() },
+            { name: 'ExpirationDate', value: ExpirationDate || null },
+            { name: 'UserID', value: UserID || null },
+            { name: 'StatusTypeID', value: StatusTypeID || null }
+        ]);
+
+        res.status(201).json({ success: true, message: 'Keycard added successfully!' });
+    } catch (error) {
+        console.error('Add keycard error:', error);
+        res.status(500).json({ success: false, message: error.message || 'Failed to add keycard.' });
+    }
+};
+
+// PUT /keycards/:id
+export const updateKeycard = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { RfidTag, ExpirationDate, UserID, StatusTypeID } = req.body;
+
+        const keycard = await executeQuery(
+            `SELECT * FROM Keycards WHERE ID = @ID;`,
+            [{ name: 'ID', value: id }]
+        );
+
+        if (!keycard.recordset.length)
+            return res.status(404).json({ success: false, message: 'Keycard not found.' });
+
+        if (RfidTag) {
+            const existing = await executeQuery(
+                `SELECT ID FROM Keycards WHERE RfidTag = @RfidTag AND ID != @ID;`,
+                [
+                    { name: 'RfidTag', value: RfidTag.trim() },
+                    { name: 'ID', value: id }
+                ]
+            );
+
+            if (existing.recordset.length > 0) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'Another keycard with this RfidTag already exists.'
+                });
+            }
+        }
+
+        const fields = [];
+        const params = [{ name: 'ID', value: id }];
+
+        if (RfidTag) {
+            fields.push('RfidTag = @RfidTag');
+            params.push({ name: 'RfidTag', value: RfidTag.trim() });
+        }
+        if (ExpirationDate) {
+            fields.push('ExpirationDate = @ExpirationDate');
+            params.push({ name: 'ExpirationDate', value: ExpirationDate });
+        }
+        if (UserID) {
+            fields.push('UserID = @UserID');
+            params.push({ name: 'UserID', value: UserID });
+        }
+        if (StatusTypeID) {
+            fields.push('StatusTypeID = @StatusTypeID');
+            params.push({ name: 'StatusTypeID', value: StatusTypeID });
+        }
+        if (fields.length === 0) {
+            return res.status(400).json({ success: false, message: 'No valid fields provided for update.' });
+        }
+
+        const updateQuery = `UPDATE Keycards SET ${fields.join(', ')} WHERE ID = @ID;`;
+        await executeQuery(updateQuery, params);
+        res.status(200).json({ success: true, message: 'Keycard updated successfully!' });
+    } catch (error) {
+        console.error('Update keycard error:', error);
+        res.status(500).json({ success: false, message: error.message || 'Failed to update keycard.' });
+    }
+};
+
+// DELETE /keycards/status/:id
+export const deleteKeycard = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const existing = await executeQuery(
+            `SELECT ID FROM Keycards WHERE ID = @ID;`,
+            [{ name: 'ID', value: id }]
+        );
+
+        if (existing.length === 0)
+            return res.status(404).json({ message: 'Keycard not found.' });
 
         await executeQuery(
-            `INSERT INTO StatusTypes (StatusName, StatusDescription) VALUES (@StatusName, StatusDescription);`,
-            [
-                { name: 'StatusName', value: StatusName.trim() },
-                { name: 'StatusDescription', value: StatusDescription.trim() }
-            ]
+            `DELETE FROM Keycards WHERE ID = @ID;`,
+            [{ name: 'ID', value: id }]
         );
 
-        res.status(201).json({ message: 'Keycard status added successfully!' });
+        res.status(200).json({ message: 'Keycard deleted successfully!' });
     } catch (error) {
         console.error(error);
-        res.status(400).json({ message: 'Failed to add keycard status.' });
+        res.status(400).json({ message: 'Failed to delete keycard.' });
     }
 };
 
@@ -179,8 +271,7 @@ export const updateKeycardStatus = async (req, res) => {
         await executeQuery(
             `
             UPDATE StatusTypes
-            SET StatusName = @StatusName,
-                StatusDescription = @StatusDescription
+            SET StatusName = @StatusName, StatusDescription = @StatusDescription
             WHERE ID = @ID;
             `,
             [
