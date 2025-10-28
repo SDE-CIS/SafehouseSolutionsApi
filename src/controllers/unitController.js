@@ -43,19 +43,18 @@ export const getUnitById = async (req, res) => {
 // POST /units
 export const addUnit = async (req, res) => {
     try {
-        const { Active, DateAdded, SensorTypeID, LocationID, UserID } = req.body;
+        const { Active, SensorTypeID, LocationID, UserID } = req.body;
 
         await executeQuery(
             `
-            INSERT INTO Units (Active, DateAdded, SensorTypeID, LocationID, UserID) 
-            VALUES (@Active, @DateAdded, @SensorTypeID, @LocationID, @UserID)
+            INSERT INTO Unit (Active, DateAdded, SensorTypeID, LocationID, UserID) 
+            VALUES (@Active, GETDATE(), @SensorTypeID, @LocationID, @UserID)
             `,
             [
-                { name: 'Active', value: Active },
-                { name: 'DateAdded', value: DateAdded },
+                { name: 'Active', value: Active || 1 },
                 { name: 'SensorTypeID', value: SensorTypeID },
                 { name: 'LocationID', value: LocationID },
-                { name: 'UserID', value: UserID },
+                { name: 'UserID', value: UserID || "" },
             ]
         );
 
@@ -63,5 +62,62 @@ export const addUnit = async (req, res) => {
     } catch (error) {
         console.log(error);
         res.status(400).json({ message: 'Failed to add unit.' });
+    }
+};
+
+// PUT /units/:id
+export const updateUnit = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { Active, SensorTypeID, LocationID, UserID } = req.body;
+
+        await executeQuery(
+            `
+            UPDATE Unit
+            SET 
+                Active = @Active,
+                SensorTypeID = @SensorTypeID,
+                LocationID = @LocationID,
+                UserID = @UserID
+            WHERE ID = @ID
+            `,
+            [
+                { name: 'Active', value: Active },
+                { name: 'SensorTypeID', value: SensorTypeID },
+                { name: 'LocationID', value: LocationID },
+                { name: 'UserID', value: UserID || "" },
+                { name: 'ID', value: id }
+            ]
+        );
+
+        res.status(200).json("Unit updated successfully!");
+    } catch (error) {
+        console.log(error);
+        res.status(400).json({ message: 'Failed to update unit.' });
+    }
+};
+
+// DELETE /units/:id
+export const deleteUnit = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const existing = await executeQuery(
+            `SELECT ID FROM Unit WHERE ID = @ID;`,
+            [{ name: 'ID', value: id }]
+        );
+
+        if (existing.length === 0)
+            return res.status(404).json({ message: 'Unit not found.' });
+
+        await executeQuery(
+            `DELETE FROM Unit WHERE ID = @ID;`,
+            [{ name: 'ID', value: id }]
+        );
+
+        res.status(200).json({ message: 'Unit deleted successfully!' });
+    } catch (error) {
+        console.error(error);
+        res.status(400).json({ message: 'Failed to delete unit.' });
     }
 };
