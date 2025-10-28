@@ -24,7 +24,7 @@ export const addTemperature = async (req, res) => {
 
         await executeQuery(
             `
-            INSERT INTO Temperatures (Temperature, MeasurementTimestamp, UnitID)
+            INSERT INTO TemperatureSensor (Temperature, MeasurementTimestamp, UnitID)
             VALUES (@Temperature, GETDATE(), @UnitID);
             `,
             [
@@ -58,3 +58,26 @@ export const getFanActivity = async (req, res) => {
         res.status(500).json({ success: false, message: error.message || error });
     }
 };
+
+// POST /temperature/fan
+export const addFanActivity = async (req, res) => {
+    try {
+        const { UnitID } = req.body;
+
+        await executeQuery(
+            `
+            INSERT INTO FanSensor (ActivationTimestamp, UnitID)
+            VALUES (GETDATE(), @UnitID);
+            `,
+            [
+                { name: 'UnitID', value: UnitID || null }
+            ]
+        );
+
+        res.status(201).json({ success: true, message: 'Fan activity record added successfully!' });
+    } catch (error) {
+        console.error('Add fan activity error:', error);
+        res.status(500).json({ success: false, message: error.message || 'Failed to add fan activity record.' });
+    }
+};
+
