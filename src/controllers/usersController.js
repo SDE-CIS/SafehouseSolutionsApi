@@ -6,7 +6,7 @@ dotenv.config();
 // GET /users
 export const getUsers = async (req, res) => {
     try {
-        const usersQuery = `SELECT * FROM Users`;
+        const usersQuery = `SELECT ID, FirstName, LastName, PhoneNumber, Email, Username, Password FROM Users`;
         const result = await executeQuery(usersQuery);
         res.status(200).json({ success: true, data: result.recordset });
     } catch (error) {
@@ -63,6 +63,60 @@ export const addUser = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(400).json({ message: 'Failed to add user.' });
+    }
+};
+
+// PUT /users/:id
+export const updateUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { FirstName, LastName, PhoneNumber, Email, Username, Password } = req.body;
+
+        const existingUser = await executeQuery(
+            `SELECT * FROM Users WHERE ID = @ID`,
+            [{ name: 'ID', value: id }]
+        );
+
+        if (!existingUser.recordset.length) {
+            return res.status(404).json({ message: 'User not found.' });
+        }
+
+        if (Username) {
+            const usernameCheck = await executeQuery(
+                `SELECT 1 FROM Users WHERE Username = @Username AND ID != @ID`,
+                [{ name: 'Username', value: Username }, { name: 'ID', value: id }]
+            );
+
+            if (usernameCheck.recordset.length)
+                return res.status(409).json({ message: 'Username already exists.' });
+        }
+
+        const fields = [];
+        const params = [{ name: 'ID', value: id }];
+
+        if (FirstName !== undefined) { fields.push('FirstName = @FirstName'); params.push({ name: 'FirstName', value: FirstName }); }
+        if (LastName !== undefined) { fields.push('LastName = @LastName'); params.push({ name: 'LastName', value: LastName }); }
+        if (PhoneNumber !== undefined) { fields.push('PhoneNumber = @PhoneNumber'); params.push({ name: 'PhoneNumber', value: PhoneNumber }); }
+        if (Email !== undefined) { fields.push('Email = @Email'); params.push({ name: 'Email', value: Email }); }
+        if (Username !== undefined) { fields.push('Username = @Username'); params.push({ name: 'Username', value: Username }); }
+        if (Password) {
+            const hashedPassword = await bcrypt.hash(Password, parseInt(process.env.BCRYPT_SALT_ROUNDS || '10'));
+            fields.push('Password = @Password');
+            params.push({ name: 'Password', value: hashedPassword });
+        }
+
+        if (!fields.length)
+            return res.status(400).json({ message: 'No fields to update.' });
+
+        await executeQuery(
+            `UPDATE Users SET ${fields.join(', ')} WHERE ID = @ID`,
+            params
+        );
+
+        res.status(200).json({ message: 'User updated successfully!' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Failed to update user.' });
     }
 };
 
