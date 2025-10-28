@@ -1,6 +1,6 @@
 import { executeQuery } from '../utils/executeQuery.js';
 
-// ---- KEYCARDS
+// ---- KEYCARDS ----------------------------------------------------------------------------------------------------
 
 // GET /keycards
 export const getKeycards = async (req, res) => {
@@ -163,7 +163,7 @@ export const deleteKeycard = async (req, res) => {
     }
 };
 
-// ---- KEYCARD ACCESS LOGS 
+// ---- KEYCARD ACCESS LOGS ----------------------------------------------------------------------------------------------------
 
 // GET /keycards/logs
 export const getAccessLogs = async (req, res) => {
@@ -177,7 +177,7 @@ export const getAccessLogs = async (req, res) => {
     }
 };
 
-// ---- KEYCARD SATUSES
+// ---- KEYCARD SATUSES ----------------------------------------------------------------------------------------------------
 
 // GET /keycards/status
 export const getKeycardsStatuses = async (req, res) => {
