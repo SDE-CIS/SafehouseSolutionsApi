@@ -177,6 +177,29 @@ export const getAccessLogs = async (req, res) => {
     }
 };
 
+// POST /keycards/logs
+export const addAccessLog = async (req, res) => {
+    try {
+        const { KeycardID, LocationID } = req.body;
+
+        await executeQuery(
+            `
+            INSERT INTO AccessLog (AccessTime, KeycardID, LocationID)
+            VALUES (GETDATE(), @KeycardID, @LocationID);
+            `,
+            [
+                { name: 'KeycardID', value: KeycardID },
+                { name: 'LocationID', value: LocationID }
+            ]
+        );
+
+        res.status(201).json({ success: true, message: 'Access log record added successfully!' });
+    } catch (error) {
+        console.error('Error adding access log:', error);
+        res.status(500).json({ success: false, message: error.message || 'Failed to add access log record.' });
+    }
+};
+
 // ---- KEYCARD SATUSES ----------------------------------------------------------------------------------------------------
 
 // GET /keycards/status
