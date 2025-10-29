@@ -16,7 +16,7 @@ if (!brokerUrl) {
 }
 
 const client = mqtt.connect(brokerUrl, mqttOptions);
-const scanTopic = `+/rfid/scan/tag/frontdoor/1`;
+const scanTopic = `1/rfid/scan/tag/frontdoor/1`;
 
 client.on('connect', () => {
     console.log('Connected to MQTT broker');
@@ -70,8 +70,8 @@ client.on('message', async (topic, message) => {
             userId = result.recordset[0].UserID;
         }
 
-        const responseTopic = `${userId}/RFID/frontdoor/1/scan/${rfidTag}`;
-        const responsePayload = JSON.stringify({ authorisation: authorised.toString() });
+        const responseTopic = `${userId}/rfid/frontdoor/1/scan/${rfidTag}`;
+        const responsePayload = JSON.stringify({ authorisation: authorised });
 
         client.publish(responseTopic, responsePayload, { qos: 1 }, (err) => {
             if (err) console.error('Failed to publish response:', err);
