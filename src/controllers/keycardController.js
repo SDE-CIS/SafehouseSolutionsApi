@@ -43,10 +43,10 @@ export const getKeycardById = async (req, res) => {
 // POST /keycards
 export const addKeycard = async (req, res) => {
     try {
-        const { RfidTag, ExpirationDate, UserID, StatusTypeID } = req.body;
+        const { RfidTag, Name, ExpirationDate, UserID, StatusTypeID } = req.body;
 
         if (!RfidTag)
-            return res.status(400).json({ success: false, message: 'Please provide an RfidTag.'});
+            return res.status(400).json({ success: false, message: 'Please provide an RfidTag.' });
 
         const existing = await executeQuery(
             `SELECT ID FROM Keycards WHERE RfidTag = @RfidTag;`,
@@ -57,12 +57,13 @@ export const addKeycard = async (req, res) => {
             return res.status(409).json({ success: false, message: 'A keycard with this RfidTag already exists.' });
 
         const insertQuery = `
-            INSERT INTO Keycards (RfidTag, ExpirationDate, UserID, StatusTypeID, IssueDate)
-            VALUES (@RfidTag, @ExpirationDate, @UserID, @StatusTypeID, GETDATE());
+            INSERT INTO Keycards (RfidTag, Name, ExpirationDate, UserID, StatusTypeID, IssueDate)
+            VALUES (@RfidTag, @Name, @ExpirationDate, @UserID, @StatusTypeID, GETDATE());
         `;
 
         await executeQuery(insertQuery, [
             { name: 'RfidTag', value: RfidTag.trim() },
+            { name: 'Name', value: Name.trim() },
             { name: 'ExpirationDate', value: ExpirationDate || null },
             { name: 'UserID', value: UserID || null },
             { name: 'StatusTypeID', value: StatusTypeID || null }
@@ -79,7 +80,7 @@ export const addKeycard = async (req, res) => {
 export const updateKeycard = async (req, res) => {
     try {
         const { id } = req.params;
-        const { RfidTag, ExpirationDate, UserID, StatusTypeID } = req.body;
+        const { RfidTag, Name, ExpirationDate, UserID, StatusTypeID } = req.body;
 
         const keycard = await executeQuery(
             `SELECT * FROM Keycards WHERE ID = @ID;`,
@@ -112,6 +113,10 @@ export const updateKeycard = async (req, res) => {
         if (RfidTag) {
             fields.push('RfidTag = @RfidTag');
             params.push({ name: 'RfidTag', value: RfidTag.trim() });
+        }
+        if (RfidTag) {
+            fields.push('Name = @Name');
+            params.push({ name: 'Name', value: Name.trim() });
         }
         if (ExpirationDate) {
             fields.push('ExpirationDate = @ExpirationDate');
