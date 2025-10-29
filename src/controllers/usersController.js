@@ -77,9 +77,8 @@ export const updateUser = async (req, res) => {
             [{ name: 'ID', value: id }]
         );
 
-        if (!existingUser.recordset.length) {
+        if (!existingUser.recordset.length)
             return res.status(404).json({ message: 'User not found.' });
-        }
 
         if (Username) {
             const usernameCheck = await executeQuery(
@@ -94,11 +93,25 @@ export const updateUser = async (req, res) => {
         const fields = [];
         const params = [{ name: 'ID', value: id }];
 
-        if (FirstName !== undefined) { fields.push('FirstName = @FirstName'); params.push({ name: 'FirstName', value: FirstName }); }
-        if (LastName !== undefined) { fields.push('LastName = @LastName'); params.push({ name: 'LastName', value: LastName }); }
-        if (PhoneNumber !== undefined) { fields.push('PhoneNumber = @PhoneNumber'); params.push({ name: 'PhoneNumber', value: PhoneNumber }); }
-        if (Email !== undefined) { fields.push('Email = @Email'); params.push({ name: 'Email', value: Email }); }
-        if (Username !== undefined) { fields.push('Username = @Username'); params.push({ name: 'Username', value: Username }); }
+        if (FirstName !== undefined) {
+            fields.push('FirstName = @FirstName');
+            params.push({ name: 'FirstName', value: FirstName });
+        }
+        if (LastName !== undefined) {
+            fields.push('LastName = @LastName');
+            params.push({ name: 'LastName', value: LastName });
+        }
+        if (PhoneNumber !== undefined) {
+            fields.push('PhoneNumber = @PhoneNumber');
+            params.push({ name: 'PhoneNumber', value: PhoneNumber });
+        }
+        if (Email !== undefined) {
+            fields.push('Email = @Email');
+            params.push({ name: 'Email', value: Email });
+        }
+        if (Username !== undefined) {
+            fields.push('Username = @Username'); params.push({ name: 'Username', value: Username });
+        }
         if (Password) {
             const hashedPassword = await bcrypt.hash(Password, parseInt(process.env.BCRYPT_SALT_ROUNDS || '10'));
             fields.push('Password = @Password');
@@ -108,17 +121,40 @@ export const updateUser = async (req, res) => {
         if (!fields.length)
             return res.status(400).json({ message: 'No fields to update.' });
 
-        await executeQuery(
-            `UPDATE Users SET ${fields.join(', ')} WHERE ID = @ID`,
-            params
-        );
-
+        await executeQuery(`UPDATE Users SET ${fields.join(', ')} WHERE ID = @ID`, params);
         res.status(200).json({ message: 'User updated successfully!' });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Failed to update user.' });
     }
 };
+
+// PUT /users/pfp/:id
+export const updateUserPfp = async (req, res) => {
+    /*
+    try {
+        const { id } = req.params;
+        const { UserAvatar } = req.body;
+
+        await executeQuery(
+            `
+            UPDATE Unit
+            SET UserAvatar = @UserAvatar,
+            WHERE ID = @ID
+            `,
+            [
+                { name: 'UserAvatar', value: UserAvatar }
+            ]
+        );
+
+        res.status(200).json("User avatar updated successfully!");
+    } catch (error) {
+        console.log(error);
+        res.status(400).json({ message: "Failed to update the user's avatar." });
+    }
+        */
+};
+
 
 // DELETE /users
 export const deleteUser = async (req, res) => {
