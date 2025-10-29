@@ -80,4 +80,3 @@ export const addFanActivity = async (req, res) => {
         res.status(500).json({ success: false, message: error.message || 'Failed to add fan activity record.' });
     }
 };
-
