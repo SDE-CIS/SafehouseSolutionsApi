@@ -32,7 +32,10 @@ export const getKeycardById = async (req, res) => {
         `;
 
         const result = await executeQuery(keycardQuery, [{ name: 'ID', value: id }]);
-        if (result.recordset.length === 0) { return res.status(404).json({ success: false, message: 'Keycard not found' }); }
+
+        if (result.recordset.length === 0)
+            return res.status(404).json({ success: false, message: 'Keycard not found' });
+
         res.status(200).json({ success: true, data: result.recordset[0] });
     } catch (error) {
         console.error('Error fetching unit by ID:', error);
@@ -99,12 +102,8 @@ export const updateKeycard = async (req, res) => {
                 ]
             );
 
-            if (existing.recordset.length > 0) {
-                return res.status(409).json({
-                    success: false,
-                    message: 'Another keycard with this RfidTag already exists.'
-                });
-            }
+            if (existing.recordset.length > 0)
+                return res.status(409).json({ success: false, message: 'Another keycard with this RfidTag already exists.' });
         }
 
         const fields = [];

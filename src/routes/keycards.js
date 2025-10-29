@@ -1,5 +1,6 @@
 import Router from 'express';
-import { getKeycards, getAccessLogs, getKeycardById, addKeycard, updateKeycard, deleteKeycard,
+import {
+    getKeycards, getAccessLogs, getKeycardById, addKeycard, updateKeycard, deleteKeycard,
     getKeycardsStatuses, getKeycardsStatusesByID, addKeycardStatus, updateKeycardStatus, deleteKeycardStatus
 } from '../controllers/keycardController.js';
 const router = Router();

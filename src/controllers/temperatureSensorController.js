@@ -7,7 +7,7 @@ export const getTemperatures = async (req, res) => {
     try {
         const temperatureQuery = `SELECT * FROM TemperatureSensor`;
         const result = await executeQuery(temperatureQuery);
-        res.status(200).json({ success: true,data: result.recordset });
+        res.status(200).json({ success: true, data: result.recordset });
     } catch (error) {
         console.error('Connection error:', error);
         res.status(500).json({ success: false, message: error.message || error });
@@ -50,7 +50,7 @@ export const getFanActivity = async (req, res) => {
             FROM FanSensor fs
             LEFT JOIN TemperatureSensor ts ON fs.UnitID = ts.UnitID
         `;
-        
+
         const result = await executeQuery(fanQuery);
         res.status(200).json({ success: true, data: result.recordset });
     } catch (error) {
@@ -69,9 +69,7 @@ export const addFanActivity = async (req, res) => {
             INSERT INTO FanSensor (ActivationTimestamp, UnitID)
             VALUES (GETDATE(), @UnitID);
             `,
-            [
-                { name: 'UnitID', value: UnitID || null }
-            ]
+            [{ name: 'UnitID', value: UnitID || null }]
         );
 
         res.status(201).json({ success: true, message: 'Fan activity record added successfully!' });

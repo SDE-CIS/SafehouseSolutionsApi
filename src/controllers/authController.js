@@ -18,15 +18,12 @@ export const authUser = async (req, res) => {
     const { Username, Password } = req.body;
 
     try {
-
-        if(!Username || !Password)
+        if (!Username || !Password)
             return res.status(400).json({ message: 'Please provide username and password.' });
 
         const result = await executeQuery(
             `SELECT * FROM Users WHERE Username = @Username`,
-            [
-                { name: 'Username', value: Username },
-            ]
+            [{ name: 'Username', value: Username }]
         );
 
         const user = result.recordset[0];
@@ -40,9 +37,7 @@ export const authUser = async (req, res) => {
 
         const accessToken = generateToken(user.ID, user.Username, process.env.JWT_SECRET, '1h');
         const refreshToken = generateToken(user.ID, user.Username, process.env.REFRESH_TOKEN_SECRET, '1d');
-        const updateResult = await updateRefreshToken(user.ID, refreshToken);
-        console.log('Refresh token update result:', updateResult);
-
+        await updateRefreshToken(user.ID, refreshToken);
         const simplifiedUser = { id: user.ID, username: user.Username, firstName: user.FirstName, lastName: user.LastName, phoneNumber: user.PhoneNumber || "", email: user.Email };
         res.json({ success: true, accessToken, refreshToken, user: simplifiedUser });
 
@@ -55,9 +50,9 @@ export const authUser = async (req, res) => {
 // POST /auth/refresh
 export const refreshToken = async (req, res) => {
     const { refreshToken } = req.body;
-    if (!refreshToken) {
+
+    if (!refreshToken)
         return res.status(401).json({ message: 'Refresh token is required.' });
-    }
 
     try {
         const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
@@ -75,9 +70,8 @@ export const refreshToken = async (req, res) => {
         );
 
         const user = result.recordset[0];
-        if (!user) {
+        if (!user)
             return res.status(401).json({ message: 'Invalid refresh token.' });
-        }
 
         const accessToken = generateToken(user.Id, user.Username, process.env.JWT_SECRET, '1h');
         res.status(200).json({ message: 'Token refreshed successfully', accessToken });
