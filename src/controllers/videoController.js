@@ -66,17 +66,41 @@ export const streamVideo = async (req, res) => {
             return res.status(404).json({ success: false, message: "Video not found." });
         }
 
-        const blobProperties = await blobClient.getProperties();
-        const contentType = blobProperties.contentType || "application/octet-stream";
+        const props = await blobClient.getProperties();
+        const fileSize = props.contentLength;
+        const contentType = props.contentType || "video/mp4";
 
-        const downloadBlockBlobResponse = await blobClient.download();
+        const range = req.headers.range;
 
-        res.setHeader("Content-Type", contentType);
-        res.setHeader("Content-Disposition", "inline");
+        if (!range) {
+            // No range — send the whole video (fallback)
+            res.setHeader("Content-Length", fileSize);
+            res.setHeader("Content-Type", contentType);
+            res.setHeader("Accept-Ranges", "bytes");
 
-        downloadBlockBlobResponse.readableStreamBody.pipe(res);
+            const fullDownload = await blobClient.download();
+            return fullDownload.readableStreamBody.pipe(res);
+        }
+
+        // Parse Range header: e.g. "bytes=1000000-"
+        const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB per chunk
+        const start = Number(range.replace(/\D/g, ""));
+        const end = Math.min(start + CHUNK_SIZE, fileSize - 1);
+
+        const contentLength = end - start + 1;
+
+        res.writeHead(206, {
+            "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+            "Accept-Ranges": "bytes",
+            "Content-Length": contentLength,
+            "Content-Type": contentType,
+            "Cache-Control": "no-cache",
+        });
+
+        const partialDownload = await blobClient.download(start, contentLength);
+        partialDownload.readableStreamBody.pipe(res);
     } catch (error) {
-        console.error("Download error:", error.message);
+        console.error("Stream error:", error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 };
