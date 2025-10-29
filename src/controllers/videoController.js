@@ -1,4 +1,5 @@
 import { BlobServiceClient } from "@azure/storage-blob";
+import mime from "mime-types";
 
 const account = process.env.AZURE_STORAGE_ACCOUNT;
 const sasToken = process.env.AZURE_SAS_TOKEN;
@@ -54,53 +55,43 @@ export const getVideoByName = async (req, res) => {
 export const streamVideo = async (req, res) => {
     try {
         const { name } = req.params;
-
-        if (!name) {
-            return res.status(400).json({ success: false, message: "Missing video name." });
-        }
-
         const blobClient = containerClient.getBlobClient(name);
         const exists = await blobClient.exists();
-
-        if (!exists) {
-            return res.status(404).json({ success: false, message: "Video not found." });
-        }
+        if (!exists) return res.status(404).json({ success: false, message: "Video not found." });
 
         const props = await blobClient.getProperties();
         const fileSize = props.contentLength;
-        const contentType = props.contentType || "video/mp4";
-
         const range = req.headers.range;
 
-        if (!range) {
-            // No range — send the whole video (fallback)
-            res.setHeader("Content-Length", fileSize);
-            res.setHeader("Content-Type", contentType);
-            res.setHeader("Accept-Ranges", "bytes");
+        let mimeType = mime.lookup(name) || "video/mp4";
+        if (mimeType.startsWith("application/")) mimeType = "video/mp4";
 
-            const fullDownload = await blobClient.download();
-            return fullDownload.readableStreamBody.pipe(res);
+        if (!range) {
+            res.writeHead(200, {
+                "Content-Length": fileSize,
+                "Content-Type": mimeType,
+                "Accept-Ranges": "bytes",
+            });
+            const download = await blobClient.download();
+            return download.readableStreamBody.pipe(res);
         }
 
-        // Parse Range header: e.g. "bytes=1000000-"
-        const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB per chunk
+        const CHUNK_SIZE = 2 * 1024 * 1024;
         const start = Number(range.replace(/\D/g, ""));
         const end = Math.min(start + CHUNK_SIZE, fileSize - 1);
-
         const contentLength = end - start + 1;
 
         res.writeHead(206, {
             "Content-Range": `bytes ${start}-${end}/${fileSize}`,
             "Accept-Ranges": "bytes",
             "Content-Length": contentLength,
-            "Content-Type": contentType,
-            "Cache-Control": "no-cache",
+            "Content-Type": mimeType,
         });
 
-        const partialDownload = await blobClient.download(start, contentLength);
-        partialDownload.readableStreamBody.pipe(res);
+        const stream = await blobClient.download(start, contentLength);
+        stream.readableStreamBody.pipe(res);
     } catch (error) {
-        console.error("Stream error:", error.message);
+        console.error("Stream error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
