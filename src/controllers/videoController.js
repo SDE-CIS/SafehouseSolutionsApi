@@ -4,14 +4,12 @@ const account = process.env.AZURE_STORAGE_ACCOUNT;
 const sasToken = process.env.AZURE_SAS_TOKEN;
 const containerName = process.env.AZURE_CONTAINER_NAME;
 
-// initialize client properly with ?
 const blobServiceClient = new BlobServiceClient(
     `https://${account}.blob.core.windows.net/?${sasToken}`
 );
 
 const containerClient = blobServiceClient.getContainerClient(containerName);
 
-// GET /videos
 export const listVideos = async (req, res) => {
     try {
         const blobs = [];
@@ -33,7 +31,6 @@ export const listVideos = async (req, res) => {
     }
 };
 
-// GET /videos/:name
 export const getVideoByName = async (req, res) => {
     try {
         const { name } = req.params;
