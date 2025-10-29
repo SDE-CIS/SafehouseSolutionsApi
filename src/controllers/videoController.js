@@ -1,54 +1,41 @@
+import path from "path";
 import { BlobServiceClient } from "@azure/storage-blob";
-import mime from "mime-types";
 
-const account = process.env.AZURE_STORAGE_ACCOUNT;
-const sasToken = process.env.AZURE_SAS_TOKEN;
-const containerName = process.env.AZURE_CONTAINER_NAME;
+const AZURE_BLOB_URL = process.env.AZURE_BLOB_URL;
+const AZURE_SAS_TOKEN = process.env.AZURE_SAS_TOKEN;
+const AZURE_CONTAINER = "videos";
 
-const blobServiceClient = new BlobServiceClient(
-    `https://${account}.blob.core.windows.net/?${sasToken}`
-);
+const blobService = new BlobServiceClient(`${AZURE_BLOB_URL}?${AZURE_SAS_TOKEN}`);
+const containerClient = blobService.getContainerClient(AZURE_CONTAINER);
 
-const containerClient = blobServiceClient.getContainerClient(containerName);
+const baseUrl = process.env.API_BASE_URL || "http://localhost:4000";
 
 export const listVideos = async (req, res) => {
-    try {
-        const blobs = [];
-        for await (const blob of containerClient.listBlobsFlat()) {
-            blobs.push({
-                name: blob.name,
-                url: `https://${account}.blob.core.windows.net/${containerName}/${blob.name}?${sasToken}`,
-            });
-        }
+    const videos = await Promise.all(videoBlobs.map(async (blob) => {
+        const thumbFile = `${path.parse(blob.name).name}.jpg`;
+        const thumbPath = path.join("temp", "thumbs", thumbFile);
 
-        if (blobs.length === 0) {
-            return res.status(404).json({ success: false, message: "No videos found" });
-        }
+        const thumbnail = fs.existsSync(thumbPath)
+            ? `${baseUrl}/videos/thumbnail/${thumbFile}`
+            : `${baseUrl}/public/images/thumbnail-placeholder.jpg`;
 
-        res.status(200).json({ success: true, data: blobs });
-    } catch (error) {
-        console.error("Error listing videos:", error.message);
-        res.status(500).json({ success: false, message: error.message });
-    }
+        return {
+            name: blob.name,
+            url: blob.url,
+            thumbnail,
+        };
+    }));
+
+    res.status(200).json({ success: true, data: videos });
 };
 
-export const getVideoByName = async (req, res) => {
+export const getThumbnail = async (req, res) => {
     try {
-        const { name } = req.params;
-        const blobClient = containerClient.getBlobClient(name);
-
-        const exists = await blobClient.exists();
-        if (!exists) {
-            return res.status(404).json({ success: false, message: "Video not found" });
-        }
-
-        // streaming the blob back
-        const downloadBlockBlobResponse = await blobClient.download();
-        res.setHeader("Content-Type", "video/mp4");
-        downloadBlockBlobResponse.readableStreamBody.pipe(res);
+        const thumbPath = path.join(process.cwd(), "temp", "thumbs", req.params.name);
+        if (!fs.existsSync(thumbPath)) return res.status(404).send("Thumbnail not found.");
+        res.sendFile(thumbPath);
     } catch (error) {
-        console.error("Error fetching video:", error.message);
-        res.status(500).json({ success: false, message: error.message });
+        res.status(500).send(error.message);
     }
 };
 
@@ -57,41 +44,17 @@ export const streamVideo = async (req, res) => {
         const { name } = req.params;
         const blobClient = containerClient.getBlobClient(name);
         const exists = await blobClient.exists();
-        if (!exists) return res.status(404).json({ success: false, message: "Video not found." });
+        if (!exists) return res.status(404).send("Video not found");
 
-        const props = await blobClient.getProperties();
-        const fileSize = props.contentLength;
-        const range = req.headers.range;
+        const blobProps = await blobClient.getProperties();
+        const contentType = blobProps.contentType || "video/mp4";
+        const download = await blobClient.download();
 
-        let mimeType = mime.lookup(name) || "video/mp4";
-        if (mimeType.startsWith("application/")) mimeType = "video/mp4";
-
-        if (!range) {
-            res.writeHead(200, {
-                "Content-Length": fileSize,
-                "Content-Type": mimeType,
-                "Accept-Ranges": "bytes",
-            });
-            const download = await blobClient.download();
-            return download.readableStreamBody.pipe(res);
-        }
-
-        const CHUNK_SIZE = 2 * 1024 * 1024;
-        const start = Number(range.replace(/\D/g, ""));
-        const end = Math.min(start + CHUNK_SIZE, fileSize - 1);
-        const contentLength = end - start + 1;
-
-        res.writeHead(206, {
-            "Content-Range": `bytes ${start}-${end}/${fileSize}`,
-            "Accept-Ranges": "bytes",
-            "Content-Length": contentLength,
-            "Content-Type": mimeType,
-        });
-
-        const stream = await blobClient.download(start, contentLength);
-        stream.readableStreamBody.pipe(res);
+        res.setHeader("Content-Type", contentType);
+        res.setHeader("Accept-Ranges", "bytes");
+        download.readableStreamBody.pipe(res);
     } catch (error) {
-        console.error("Stream error:", error);
-        res.status(500).json({ success: false, message: error.message });
+        console.error("Stream error:", error.message);
+        res.status(500).send(error.message);
     }
 };
