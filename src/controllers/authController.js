@@ -38,7 +38,15 @@ export const authUser = async (req, res) => {
         const accessToken = generateToken(user.ID, user.Username, process.env.JWT_SECRET, '1h');
         const refreshToken = generateToken(user.ID, user.Username, process.env.REFRESH_TOKEN_SECRET, '1d');
         await updateRefreshToken(user.ID, refreshToken);
-        const simplifiedUser = { id: user.ID, username: user.Username, firstName: user.FirstName, lastName: user.LastName, phoneNumber: user.PhoneNumber || "", email: user.Email };
+        const simplifiedUser = { 
+            id: user.ID, 
+            username: user.Username, 
+            firstName: user.FirstName, 
+            lastName: user.LastName, 
+            phoneNumber: user.PhoneNumber || "", 
+            email: user.Email,
+            pfp: user.ProfilePicture || ""
+        };
         res.json({ success: true, accessToken, refreshToken, user: simplifiedUser });
 
     } catch (error) {
