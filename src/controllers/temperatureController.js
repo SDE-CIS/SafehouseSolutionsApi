@@ -161,7 +161,7 @@ export const updateFan = async (req, res) => {
     try {
         const { id } = req.params;
         const { Active, LocationID, UserID } = req.body;
-        
+
         await executeQuery(
             `
             UPDATE FanSensors
@@ -183,5 +183,35 @@ export const updateFan = async (req, res) => {
     } catch (error) {
         console.error('Update fan activity error:', error);
         res.status(500).json({ success: false, message: error.message || 'Failed to update fan device.' });
+    }
+};
+
+// DELETE /temperature/fan/device/:id
+export const deleteFan = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const existing = await executeQuery(
+            `SELECT ID FROM FanSensors WHERE ID = @ID;`,
+            [{ name: 'ID', value: id }]
+        );
+
+        if (existing.length === 0)
+            return res.status(404).json({ message: "This fan device doesn't exist." });
+
+        await executeQuery(
+            `DELETE FROM FanData WHERE DeviceID = @DeviceID;`,
+            [{ name: 'DeviceID', value: id }]
+        );
+
+        await executeQuery(
+            `DELETE FROM FanSensors WHERE ID = @ID;`,
+            [{ name: 'ID', value: id }]
+        );
+
+        res.status(200).json({ message: 'Fan device and related data removed successfully!' });
+    } catch (error) {
+        console.error(error);
+        res.status(400).json({ message: 'Failed to remove fan device.' });
     }
 };

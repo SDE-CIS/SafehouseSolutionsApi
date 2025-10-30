@@ -1,7 +1,8 @@
 import Router from 'express';
 import {
     getTemperatureData, addTemperatureData, deleteTemperatureData,
-    getFans, getFanByID, getFanData, addFanActivity, addFan, updateFan
+    getFans, getFanByID, addFan, updateFan, deleteFan,
+    getFanData, addFanActivity, 
 } from '../controllers/temperatureController.js';
 const router = Router();
 
@@ -17,5 +18,6 @@ router.post('/fan/device', addFan);
 router.put('/fan/device/:id', updateFan);
 
 router.delete('/:id', deleteTemperatureData);
+router.delete('/fan/device/:id', deleteFan);
 
 export default router;
