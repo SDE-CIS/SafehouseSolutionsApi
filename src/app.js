@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import client from "./config/mqtt.js";
+import path from 'path';
 
 import authRoutes from './routes/auth.js';
 import keycardRoutes from './routes/keycards.js';
@@ -22,6 +22,8 @@ const HOST = process.env.HOST || 'localhost';
 
 // CORS
 app.use(cors({ origin: '*', credentials: true }));
+
+app.use("/uploads", express.static(path.resolve("uploads")));
 
 app.use('/auth', authRoutes);
 app.use('/keycards', keycardRoutes);

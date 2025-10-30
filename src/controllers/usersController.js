@@ -32,7 +32,7 @@ export const getUsersByID = async (req, res) => {
 // POST /users
 export const addUser = async (req, res) => {
     try {
-        const { FirstName, LastName, PhoneNumber, Email, Username, Password, ProfilePicture } = req.body;
+        const { FirstName, LastName, PhoneNumber, Email, Username, Password } = req.body;
 
         const existingUser = await executeQuery(
             `SELECT COUNT(*) AS count FROM Users WHERE Username = @Username`,
@@ -43,12 +43,11 @@ export const addUser = async (req, res) => {
             return res.status(409).json({ message: 'Username already exists.' });
 
         const hashedPassword = await bcrypt.hash(Password, parseInt(process.env.BCRYPT_SALT_ROUNDS || '10'));
-        const imageBuffer = Buffer.from(ProfilePicture, 'base64');
 
         await executeQuery(
             `
-            INSERT INTO Users (FirstName, LastName, PhoneNumber, Email, Username, Password, ProfilePicture)
-            VALUES (@FirstName, @LastName, @PhoneNumber, @Email, @Username, @Password, @ProfilePicture);
+            INSERT INTO Users (FirstName, LastName, PhoneNumber, Email, Username, Password)
+            VALUES (@FirstName, @LastName, @PhoneNumber, @Email, @Username, @Password);
             `,
             [
                 { name: 'FirstName', value: FirstName },
@@ -57,7 +56,6 @@ export const addUser = async (req, res) => {
                 { name: 'Email', value: Email },
                 { name: 'Username', value: Username },
                 { name: 'Password', value: hashedPassword },
-                { name: 'ProfilePicture', value: imageBuffer || "" },
             ]
         );
 
@@ -135,33 +133,57 @@ export const updateUser = async (req, res) => {
     }
 };
 
-// PUT /users/pfp/:id
-export const updateUserPfp = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { ProfilePicture } = req.body;
+// PUT /users/avatar/:id
+export const updateUserProfilePicture = async (req, res) => {
+    const { id } = req.params;
 
-        const existingUser = await executeQuery(
-            `SELECT Username FROM Users WHERE ID = @ID`,
-            [{ name: 'ID', value: id }]
+    try {
+        const userExists = await executeQuery(
+            `SELECT ID FROM Users WHERE ID = @ID`,
+            [{ name: "ID", value: id }]
         );
 
-        if (!existingUser.recordset.length)
-            return res.status(404).json({ message: 'User not found.' });
+        if (!userExists.recordset.length)
+            return res.status(404).json({ success: false, message: "User not found." });
 
-        const imageBuffer = Buffer.from(ProfilePicture, 'base64');
+        let pictureUrl = null;
+
+        if (req.file) {
+            const fileName = req.file.filename;
+            pictureUrl = `${process.env.BASE_URL || "http://localhost:4000"}/uploads/${fileName}`;
+        }
+
+        else if (req.body?.ProfilePicture) {
+            const { ProfilePicture } = req.body;
+            if (ProfilePicture.startsWith("http")) {
+                pictureUrl = ProfilePicture;
+            } else {
+                return res.status(400).json({ success: false, message: "Invalid URL format." });
+            }
+        } else {
+            return res.status(400).json({ success: false, message: "No picture provided." });
+        }
+
         await executeQuery(
             `UPDATE Users SET ProfilePicture = @ProfilePicture WHERE ID = @ID`,
             [
-                { name: 'ProfilePicture', value: imageBuffer },
-                { name: 'ID', value: id }
+                { name: "ProfilePicture", value: pictureUrl },
+                { name: "ID", value: id },
             ]
         );
 
-        res.status(200).json("User avatar updated successfully!");
+        res.status(200).json({
+            success: true,
+            message: "Profile picture URL saved successfully!",
+            url: pictureUrl,
+        });
     } catch (error) {
-        console.log(error);
-        res.status(400).json({ message: "Failed to update the user's avatar." });
+        console.error("Error updating profile picture:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to update profile picture.",
+            error: error.message,
+        });
     }
 };
 
