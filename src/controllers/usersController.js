@@ -136,68 +136,52 @@ export const updateUser = async (req, res) => {
 // PUT /users/avatar/:id
 export const updateUserProfilePicture = async (req, res) => {
     const { id } = req.params;
-    const { ProfilePicture } = req.body;
 
     try {
         const userExists = await executeQuery(
             `SELECT ID FROM Users WHERE ID = @ID`,
-            [{ name: 'ID', value: id }]
+            [{ name: "ID", value: id }]
         );
 
         if (!userExists.recordset.length)
-            return res.status(404).json({ success: false, message: 'User not found.' });
+            return res.status(404).json({ success: false, message: "User not found." });
 
-        let imageBuffer = null;
+        let pictureUrl = null;
 
         if (req.file) {
-            imageBuffer = fs.readFileSync(req.file.path);
-            fs.unlinkSync(req.file.path);
+            const fileName = req.file.filename;
+            pictureUrl = `${process.env.BASE_URL || "http://localhost:4000"}/uploads/${fileName}`;
         }
 
-        else if (ProfilePicture) {
-            if (ProfilePicture.startsWith('data:image')) {
-                const base64Data = ProfilePicture.split(',')[1];
-                imageBuffer = Buffer.from(base64Data, 'base64');
-            } else if (ProfilePicture.startsWith('http')) {
-                await executeQuery(
-                    `UPDATE Users SET ProfilePicture = @ProfilePicture WHERE ID = @ID`,
-                    [
-                        { name: 'ProfilePicture', value: ProfilePicture },
-                        { name: 'ID', value: id },
-                    ]
-                );
-                return res.status(200).json({
-                    success: true,
-                    message: 'Profile picture URL updated successfully!',
-                });
+        else if (req.body?.ProfilePicture) {
+            const { ProfilePicture } = req.body;
+            if (ProfilePicture.startsWith("http")) {
+                pictureUrl = ProfilePicture;
             } else {
-                return res
-                    .status(400)
-                    .json({ success: false, message: 'Invalid ProfilePicture format.' });
+                return res.status(400).json({ success: false, message: "Invalid URL format." });
             }
         } else {
-            return res
-                .status(400)
-                .json({ success: false, message: 'No picture provided.' });
+            return res.status(400).json({ success: false, message: "No picture provided." });
         }
 
         await executeQuery(
             `UPDATE Users SET ProfilePicture = @ProfilePicture WHERE ID = @ID`,
             [
-                { name: 'ProfilePicture', value: imageBuffer },
-                { name: 'ID', value: id },
+                { name: "ProfilePicture", value: pictureUrl },
+                { name: "ID", value: id },
             ]
         );
 
         res.status(200).json({
             success: true,
-            message: 'Profile picture updated successfully!',
+            message: "Profile picture URL saved successfully!",
+            url: pictureUrl,
         });
     } catch (error) {
-        console.error('Error updating profile picture:', error);
+        console.error("Error updating profile picture:", error);
         res.status(500).json({
             success: false,
-            message: 'Failed to update profile picture.',
+            message: "Failed to update profile picture.",
             error: error.message,
         });
     }
