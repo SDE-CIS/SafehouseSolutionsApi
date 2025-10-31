@@ -6,7 +6,7 @@ pool:
 
 variables:
   build.ArtifactStagingDirectory: '$(Pipeline.Workspace)/artifacts'
-  apiFolderPath: '\\10.130.56.55\E$\SafehouseSolutionsApi'
+  apiFolderPath: '\\192.168.1.129\E$\SafehouseSolutionsApi'
   serverIP: '192.168.1.129'
   appSubdir: '.'
 
