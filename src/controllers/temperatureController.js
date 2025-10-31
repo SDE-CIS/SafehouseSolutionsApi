@@ -68,7 +68,33 @@ export const deleteTemperatureData = async (req, res) => {
     }
 };
 
-// ---- FAN SENSOR DEVICES ----------------------------------------------------------------------------------------------------
+// ---- TEMPERATURE DEVICE SETTINGS ----------------------------------------------------------------------------------------------------
+
+// GET /temperature/device
+export const getTemperatureDevices = async (req, res) => {
+    try {
+        const tdQuery = `SELECT * FROM TemperatureSensors`;
+        const result = await executeQuery(tdQuery);
+        res.status(200).json({ success: true, data: result.recordset });
+    } catch (error) {
+        console.error('Connection error:', error);
+        res.status(500).json({ success: false, message: error.message || error });
+    }
+};
+
+// GET /temperature/device/:id
+export const getTemperatureDeviceByID = async (req, res) => {
+    try {
+        const tdQuery = `SELECT * FROM TemperatureSensors`;
+        const result = await executeQuery(tdQuery);
+        res.status(200).json({ success: true, data: result.recordset });
+    } catch (error) {
+        console.error('Connection error:', error);
+        res.status(500).json({ success: false, message: error.message || error });
+    }
+};
+
+// ---- FAN SENSOR DATA ----------------------------------------------------------------------------------------------------
 
 // GET /temperature/fan
 export const getFanData = async (req, res) => {
@@ -76,33 +102,6 @@ export const getFanData = async (req, res) => {
         const fanQuery = `SELECT * FROM FanData`;
         const result = await executeQuery(fanQuery);
         res.status(200).json({ success: true, data: result.recordset });
-    } catch (error) {
-        console.error('Connection error:', error);
-        res.status(500).json({ success: false, message: error.message || error });
-    }
-};
-
-// GET /temperature/fan/device
-export const getFans = async (req, res) => {
-    try {
-        const fanQuery = `SELECT * FROM FanSensors`;
-        const result = await executeQuery(fanQuery);
-        res.status(200).json({ success: true, data: result.recordset });
-    } catch (error) {
-        console.error('Connection error:', error);
-        res.status(500).json({ success: false, message: error.message || error });
-    }
-};
-
-// GET /temperature/fan/device/:id
-export const getFanByID = async (req, res) => {
-    const { id } = req.params;
-    try {
-        const locationQuery = `SELECT * FROM FanSensors WHERE ID = @ID`;
-        const result = await executeQuery(locationQuery, [{ name: 'ID', value: id }]);
-        if (result.recordset.length === 0)
-            return res.status(404).json({ success: false, message: 'Fan sensor not found' }); 
-        res.status(200).json({ success: true, data: result.recordset[0] });
     } catch (error) {
         console.error('Connection error:', error);
         res.status(500).json({ success: false, message: error.message || error });
@@ -129,6 +128,35 @@ export const addFanActivity = async (req, res) => {
     } catch (error) {
         console.error('Add fan activity error:', error);
         res.status(500).json({ success: false, message: error.message || 'Failed to add fan activity record.' });
+    }
+};
+
+// ---- FAN SENSOR DEVICES ----------------------------------------------------------------------------------------------------
+
+// GET /temperature/fan/device
+export const getFans = async (req, res) => {
+    try {
+        const fanQuery = `SELECT * FROM FanSensors`;
+        const result = await executeQuery(fanQuery);
+        res.status(200).json({ success: true, data: result.recordset });
+    } catch (error) {
+        console.error('Connection error:', error);
+        res.status(500).json({ success: false, message: error.message || error });
+    }
+};
+
+// GET /temperature/fan/device/:id
+export const getFanByID = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const locationQuery = `SELECT * FROM FanSensors WHERE ID = @ID`;
+        const result = await executeQuery(locationQuery, [{ name: 'ID', value: id }]);
+        if (result.recordset.length === 0)
+            return res.status(404).json({ success: false, message: 'Fan sensor not found' }); 
+        res.status(200).json({ success: true, data: result.recordset[0] });
+    } catch (error) {
+        console.error('Connection error:', error);
+        res.status(500).json({ success: false, message: error.message || error });
     }
 };
 
