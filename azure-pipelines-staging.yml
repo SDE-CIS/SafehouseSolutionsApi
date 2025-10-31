@@ -1,0 +1,49 @@
+trigger:
+- staging
+
+pool:
+  name: Staging
+
+variables:
+  build.ArtifactStagingDirectory: '$(Pipeline.Workspace)/artifacts'
+  apiFolderPath: '\\10.130.56.55\E$\SafehouseSolutionsApi'
+  serverIP: '192.168.1.129'
+  appSubdir: '.'
+
+steps:
+- checkout: self
+  clean: true
+
+- task: NodeTool@0
+  displayName: 'Install Node.js 20'
+  inputs:
+    versionSpec: '20.x'
+
+- script: npm ci --omit=dev
+  displayName: 'Install dependencies (production)'
+  workingDirectory: '$(Build.SourcesDirectory)/$(appSubdir)'
+
+- task: CopyFiles@2
+  displayName: 'Stage app to ArtifactStagingDirectory'
+  inputs:
+    SourceFolder: '$(Build.SourcesDirectory)/$(appSubdir)'
+    Contents: |
+      package.json
+      package-lock.json
+      node_modules/**/*
+      src/**/*
+      dist/**/*
+      build/**/*
+      public/**/*
+      server.js
+      app.js
+      ecosystem.config.js
+      PM2.config.js
+      !.env
+    TargetFolder: '$(Build.ArtifactStagingDirectory)/SafehouseSolutionsApi'
+
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish artifact'
+  inputs:
+    targetPath: '$(Build.ArtifactStagingDirectory)/SafehouseSolutionsApi'
+    artifact: 'SafehouseSolutionsApi'
