@@ -68,7 +68,7 @@ export const deleteTemperatureData = async (req, res) => {
     }
 };
 
-// ---- TEMPERATURE DEVICE SETTINGS ----------------------------------------------------------------------------------------------------
+// ---- TEMPERATURE DEVICES ----------------------------------------------------------------------------------------------------
 
 // GET /temperature/device
 export const getTemperatureDevices = async (req, res) => {
@@ -220,6 +220,59 @@ export const deleteTemperatureDevice = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(400).json({ message: 'Failed to remove temperature device.' });
+    }
+};
+
+// ---- TEMPERATURE DEVICE SETTINGS ----------------------------------------------------------------------------------------------------
+
+// GET /temperature/device/setting
+export const getTemperatureSettings = async (req, res) => {
+    try {
+        const tdQuery = `SELECT * FROM TemperatureSettings`;
+        const result = await executeQuery(tdQuery);
+        res.status(200).json({ success: true, data: result.recordset });
+    } catch (error) {
+        console.error('Connection error:', error);
+        res.status(500).json({ success: false, message: error.message || error });
+    }
+};
+
+// GET /temperature/device/setting/:id
+export const getTemperatureSettingByID = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const locationQuery = `SELECT * FROM TemperatureSettings WHERE ID = @ID`;
+        const result = await executeQuery(locationQuery, [{ name: 'ID', value: id }]);
+        if (result.recordset.length === 0)
+            return res.status(404).json({ success: false, message: 'Temperature settings not found' }); 
+        res.status(200).json({ success: true, data: result.recordset[0] });
+    } catch (error) {
+        console.error('Connection error:', error);
+        res.status(500).json({ success: false, message: error.message || error });
+    }
+};
+
+// POST /temperature/device/setting
+export const addTemperatureSetting = async (req, res) => {
+    try {
+        const { MaxTemperature, NormalTemperature, MinTemperature, DeviceID } = req.body;
+
+        await executeQuery(
+            `
+            INSERT INTO TemperatureSettings (MaxTemperature, NormalTemperature, MinTemperature, DeviceID)
+            VALUES (@MaxTemperature, @NormalTemperature, @MinTemperature, @DeviceID);
+            `,
+            [
+                { name: 'Active', value: Active },
+                { name: 'LocationID', value: LocationID },
+                { name: 'UserID', value: UserID }
+            ]
+        );
+
+        res.status(201).json({ success: true, message: 'New temperature device registered successfully!' });
+    } catch (error) {
+        console.error('Add new temperature device error:', error);
+        res.status(500).json({ success: false, message: error.message || 'Failed to register new temperature device.' });
     }
 };
 
