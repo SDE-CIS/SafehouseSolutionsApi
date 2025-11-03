@@ -53,7 +53,7 @@ export const deleteTemperatureData = async (req, res) => {
             [{ name: 'ID', value: id }]
         );
 
-        if (existing.length === 0)
+        if (existing.recordset.length === 0)
             return res.status(404).json({ message: 'Temperature data not found.' });
 
         await executeQuery(
@@ -203,12 +203,12 @@ export const deleteTemperatureDevice = async (req, res) => {
             [{ name: 'ID', value: id }]
         );
 
-        if (existing.length === 0)
-            return res.status(404).json({ message: "This temperature device doesn't exist." });
+        if (existing.recordset.length === 0)
+            return res.status(404).json({ success: false, message: 'Device not found' });
 
         await executeQuery(
-            `DELETE FROM TemperatureData WHERE DeviceID = @DeviceID;`,
-            [{ name: 'DeviceID', value: id }]
+            `DELETE FROM TemperatureSettings WHERE DeviceID = @ID;`,
+            [{ name: 'ID', value: id }]
         );
 
         await executeQuery(
@@ -216,7 +216,7 @@ export const deleteTemperatureDevice = async (req, res) => {
             [{ name: 'ID', value: id }]
         );
 
-        res.status(200).json({ message: 'The temperature device and related data removed successfully!' });
+        res.status(200).json({ message: 'The temperature device has been removed successfully!' });
     } catch (error) {
         console.error(error);
         res.status(400).json({ message: 'Failed to remove temperature device.' });
@@ -417,7 +417,7 @@ export const getFanByID = async (req, res) => {
 };
 
 // POST /temperature/fan/device
-export const addFan = async (req, res) => {
+export const addFanDevice = async (req, res) => {
     try {
         const { Active, LocationID, UserID } = req.body;
 
@@ -508,7 +508,7 @@ export const deleteFan = async (req, res) => {
             [{ name: 'ID', value: id }]
         );
 
-        if (existing.length === 0)
+        if (existing.recordset.length === 0)
             return res.status(404).json({ message: "This fan device doesn't exist." });
 
         await executeQuery(
