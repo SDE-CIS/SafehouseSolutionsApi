@@ -263,16 +263,90 @@ export const addTemperatureSetting = async (req, res) => {
             VALUES (@MaxTemperature, @NormalTemperature, @MinTemperature, @DeviceID);
             `,
             [
-                { name: 'Active', value: Active },
-                { name: 'LocationID', value: LocationID },
-                { name: 'UserID', value: UserID }
+                { name: 'MaxTemperature', value: MaxTemperature },
+                { name: 'NormalTemperature', value: NormalTemperature },
+                { name: 'MinTemperature', value: MinTemperature },
+                { name: 'DeviceID', value: DeviceID }
             ]
         );
 
-        res.status(201).json({ success: true, message: 'New temperature device registered successfully!' });
+        res.status(201).json({ success: true, message: 'New temperature setting registered successfully!' });
     } catch (error) {
         console.error('Add new temperature device error:', error);
-        res.status(500).json({ success: false, message: error.message || 'Failed to register new temperature device.' });
+        res.status(500).json({ success: false, message: error.message || 'Failed to register new temperature setting.' });
+    }
+};
+
+// PUT /temperature/device/setting/:id
+export const updateTemperatureSetting = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { MaxTemperature, NormalTemperature, MinTemperature, DeviceID } = req.body;
+
+        if (!id) {
+            return res.status(400).json({ success: false, message: 'Setting ID is required in the URL.' });
+        }
+
+        if (MaxTemperature == null || NormalTemperature == null || MinTemperature == null || !DeviceID) {
+            return res.status(400).json({ success: false, message: 'Missing required fields in request body.' });
+        }
+
+        const result = await executeQuery(
+            `
+            UPDATE TemperatureSettings
+            SET 
+                MaxTemperature = @MaxTemperature,
+                NormalTemperature = @NormalTemperature,
+                MinTemperature = @MinTemperature,
+                DeviceID = @DeviceID
+            WHERE ID = @ID;
+            `,
+            [
+                { name: 'MaxTemperature', value: MaxTemperature },
+                { name: 'NormalTemperature', value: NormalTemperature },
+                { name: 'MinTemperature', value: MinTemperature },
+                { name: 'DeviceID', value: DeviceID },
+                { name: 'ID', value: id }
+            ]
+        );
+
+        if (result.rowsAffected && result.rowsAffected[0] === 0) {
+            return res.status(404).json({ success: false, message: 'Temperature setting not found for the given SettingID.' });
+        }
+
+        res.status(200).json({ success: true, message: 'Temperature setting updated successfully!' });
+    } catch (error) {
+        console.error('Update temperature device error:', error);
+        res.status(500).json({ success: false, message: error.message || 'Failed to update temperature setting.' });
+    }
+};
+
+// DELETE /temperature/device/setting/:id
+export const deleteTemperatureSetting = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!id)
+            return res.status(400).json({ success: false, message: 'Setting ID is required in the URL.' });
+
+        // Remove foreign key link
+        await executeQuery(
+            `UPDATE TemperatureSettings SET DeviceID = NULL WHERE ID = @ID;`,
+            [{ name: 'ID', value: id }]
+        );
+
+        const result = await executeQuery(
+            `DELETE FROM TemperatureSettings WHERE ID = @ID;`,
+            [{ name: 'ID', value: id }]
+        );
+
+        if (result.rowsAffected && result.rowsAffected[0] === 0)
+            return res.status(404).json({ success: false, message: 'Temperature setting not found for the given SettingID.' });
+
+        res.status(200).json({ success: true, message: 'Temperature setting deleted successfully!' });
+    } catch (error) {
+        console.error('Delete temperature setting error:', error);
+        res.status(500).json({ success: false, message: error.message || 'Failed to delete temperature setting.' });
     }
 };
 
