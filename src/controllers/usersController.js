@@ -150,7 +150,7 @@ export const updateUserProfilePicture = async (req, res) => {
 
         if (req.file) {
             const fileName = req.file.filename;
-            pictureUrl = `${process.env.HOST || "http://localhost:4000"}/uploads/${fileName}`;
+            pictureUrl = `${"http://" + (process.env.HOST || "localhost:4000")}/uploads/${fileName}`;
         }
 
         else if (req.body?.ProfilePicture) {

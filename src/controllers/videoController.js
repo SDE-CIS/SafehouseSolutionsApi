@@ -14,7 +14,7 @@ const THUMB_DIR = path.join(process.cwd(), "temp", "thumbs");
 
 export const listVideos = async (req, res) => {
     try {
-        const baseUrl = process.env.HOST || "http://localhost:4000";
+        const baseUrl = `http://${process.env.HOST || "localhost:4000"}`;
 
         const videoBlobs = [];
         for await (const blob of containerClient.listBlobsFlat()) {
