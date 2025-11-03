@@ -371,11 +371,14 @@ export const addFanActivity = async (req, res) => {
 
         await executeQuery(
             `
-            INSERT INTO FanData (Activation, ActivationTimestamp, DeviceID)
-            VALUES (@Activation, GETDATE(), @DeviceID);
+            INSERT INTO FanData (Activation, ActivationTimestamp, FanOn, FanSpeed, FanMode, DeviceID)
+            VALUES (@Activation, GETDATE(), @FanOn, @FanSpeed, @FanMode, @DeviceID);
             `,
             [
                 { name: 'Activation', value: Activation || null },
+                { name: 'FanOn', value: FanOn },
+                { name: 'FanSpeed', value: FanSpeed },
+                { name: 'FanMode', value: FanMode },
                 { name: 'DeviceID', value: DeviceID || null }
             ]
         );
@@ -386,6 +389,9 @@ export const addFanActivity = async (req, res) => {
         res.status(500).json({ success: false, message: error.message || 'Failed to add fan activity record.' });
     }
 };
+
+// DELETE
+//...
 
 // ---- FAN SENSOR DEVICES ----------------------------------------------------------------------------------------------------
 
