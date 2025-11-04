@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import client from "./config/mqtt.js";
 
 import authRoutes from './routes/auth.js';
 import keycardRoutes from './routes/keycards.js';
