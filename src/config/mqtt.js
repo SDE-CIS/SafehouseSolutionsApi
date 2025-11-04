@@ -1,6 +1,5 @@
 import mqtt from 'mqtt';
 import dotenv from 'dotenv';
-import { executeQuery } from '../utils/executeQuery.js';
 import { handleRfidScan, handleAssignRfid } from '../mqttHandlers/rfidHandlers.js';
 import { handleTemperaturInput } from '../mqttHandlers/temperatureHandlers.js';
 import { handleFanStateInput } from '../mqttHandlers/fanHandler.js';
@@ -24,7 +23,7 @@ const topicHandlers = {
     '+/rfid/frontdoor/1/scan': handleRfidScan,
     'rfid/assign': handleAssignRfid,
     '+/temperatur/+/+': handleTemperaturInput,
-    '+/temperatur/+/+/fanState': handleFanStateInput
+    '+/temperatur/+/+': handleFanStateInput
 }
 const topics = Object.keys(topicHandlers);
 
