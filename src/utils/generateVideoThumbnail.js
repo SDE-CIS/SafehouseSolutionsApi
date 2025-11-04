@@ -24,14 +24,11 @@ export async function generateVideoThumbnail(videoName) {
         const placeholderPath = path.join("public", "images", "thumbnail-placeholder.jpg");
 
         if (fs.existsSync(thumbnailPath)) {
-            console.log(`Using cached thumbnail: ${thumbnailPath}`);
             return thumbnailPath;
         }
 
         const tempFile = path.join(downloadDir, videoName);
         const blobUrl = `${AZURE_BLOB_URL}/${AZURE_CONTAINER}/${encodeURIComponent(videoName)}?${AZURE_SAS_TOKEN}`;
-
-        console.log(`⬇Downloading blob via HTTPS: ${videoName}`);
 
         const response = await fetch(blobUrl, {
             agent: new https.Agent({ rejectUnauthorized: false }),
@@ -51,26 +48,14 @@ export async function generateVideoThumbnail(videoName) {
             return placeholderPath;
         }
 
-        console.log(`🎞️ Generating thumbnail for ${videoName}...`);
+        const blobClient = containerClient.getBlobClient(videoName);
+        const download = await blobClient.download(0, 10 * 1024 * 1024);
 
-        await new Promise((resolve) => {
-            ffmpeg(tempFile)
-                .inputFormat(videoName.endsWith(".avi") ? "avi" : "mp4")
-                .on("start", (cmd) => console.log("FFmpeg cmd:", cmd))
-                .on("error", (err) => {
-                    console.warn(`Skipping ${videoName}: ${err.message}`);
-                    try {
-                        fs.unlinkSync(tempFile);
-                    } catch (_) { }
-                    resolve();
-                })
-                .on("end", () => {
-                    console.log(`Thumbnail created: ${thumbnailPath}`);
-                    try {
-                        fs.unlinkSync(tempFile);
-                    } catch (_) { }
-                    resolve();
-                })
+        await new Promise((resolve, reject) => {
+            ffmpeg(download.readableStreamBody)
+                .on("start", () => console.log(`FFmpeg started for ${videoName}`))
+                .on("error", reject)
+                .on("end", resolve)
                 .screenshots({
                     timestamps: ["00:00:00.5"],
                     filename: path.basename(thumbnailPath),

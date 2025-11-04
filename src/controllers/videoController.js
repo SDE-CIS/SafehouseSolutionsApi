@@ -14,8 +14,7 @@ const THUMB_DIR = path.join(process.cwd(), "temp", "thumbs");
 
 export const listVideos = async (req, res) => {
     try {
-        const baseUrl = process.env.URL
-
+        const baseUrl = process.env.URL;
         const videoBlobs = [];
         for await (const blob of containerClient.listBlobsFlat()) {
             videoBlobs.push(blob);
@@ -25,17 +24,17 @@ export const listVideos = async (req, res) => {
             videoBlobs.map(async (blob) => {
                 const name = blob.name;
                 const thumbFile = `${path.parse(name).name}.jpg`;
-
                 const thumbPath = path.join(THUMB_DIR, thumbFile);
-                const thumbExists = fs.existsSync(thumbPath);
-
-                if (!thumbExists) {
-                    await generateVideoThumbnail(name);
-                }
-
                 const thumbnailUrl = fs.existsSync(thumbPath)
                     ? `${baseUrl}/videos/thumbnail/${thumbFile}`
                     : `${baseUrl}/public/images/thumbnail-placeholder.jpg`;
+
+                // Kick off thumbnail generation in the background
+                if (!fs.existsSync(thumbPath)) {
+                    generateVideoThumbnail(name)
+                        .then(() => console.log(`Generated thumbnail for ${name}`))
+                        .catch((e) => console.warn(`Thumbnail failed for ${name}:`, e.message));
+                }
 
                 return {
                     name,
