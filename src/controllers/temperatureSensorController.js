@@ -5,7 +5,7 @@ import { executeQuery } from '../utils/executeQuery.js';
 // GET /temperature
 export const getTemperatures = async (req, res) => {
     try {
-        const temperatureQuery = `SELECT * FROM TemperatureSensor`;
+        const temperatureQuery = `SELECT * FROM TemperatureData`;
         const result = await executeQuery(temperatureQuery);
         res.status(200).json({ success: true, data: result.recordset });
     } catch (error) {
