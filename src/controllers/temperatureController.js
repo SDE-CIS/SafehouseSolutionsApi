@@ -89,7 +89,7 @@ export const getTemperatureDeviceByID = async (req, res) => {
         const locationQuery = `SELECT * FROM TemperatureSensors WHERE ID = @ID`;
         const result = await executeQuery(locationQuery, [{ name: 'ID', value: id }]);
         if (result.recordset.length === 0)
-            return res.status(404).json({ success: false, message: 'Temperature sensor not found' }); 
+            return res.status(404).json({ success: false, message: 'Temperature sensor not found' });
         res.status(200).json({ success: true, data: result.recordset[0] });
     } catch (error) {
         console.error('Connection error:', error);
@@ -244,7 +244,7 @@ export const getTemperatureSettingByID = async (req, res) => {
         const locationQuery = `SELECT * FROM TemperatureSettings WHERE ID = @ID`;
         const result = await executeQuery(locationQuery, [{ name: 'ID', value: id }]);
         if (result.recordset.length === 0)
-            return res.status(404).json({ success: false, message: 'Temperature settings not found' }); 
+            return res.status(404).json({ success: false, message: 'Temperature settings not found' });
         res.status(200).json({ success: true, data: result.recordset[0] });
     } catch (error) {
         console.error('Connection error:', error);
@@ -367,7 +367,31 @@ export const getFanData = async (req, res) => {
 // POST /temperature/fan
 export const addFanActivity = async (req, res) => {
     try {
-        const { Activation, DeviceID } = req.body;
+        const { Activation, FanMode, FanSpeed: inputFanSpeed, DeviceID } = req.body;
+
+        const validFanModes = ['on', 'off', 'auto'];
+        if (!validFanModes.includes(FanMode?.toLowerCase())) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid FanMode value. Must be one of: ${validFanModes.join(', ')}.`
+            });
+        }
+
+        let FanOn;
+        let FanSpeed = inputFanSpeed || 0;
+
+        switch (FanMode.toLowerCase()) {
+            case 'off':
+                FanOn = 0;
+                FanSpeed = 0;
+                break;
+            case 'on':
+                FanOn = 1;
+                break;
+            case 'auto':
+                FanOn = null;
+                break;
+        }
 
         await executeQuery(
             `
@@ -378,7 +402,7 @@ export const addFanActivity = async (req, res) => {
                 { name: 'Activation', value: Activation || null },
                 { name: 'FanOn', value: FanOn },
                 { name: 'FanSpeed', value: FanSpeed },
-                { name: 'FanMode', value: FanMode },
+                { name: 'FanMode', value: FanMode.toLowerCase() },
                 { name: 'DeviceID', value: DeviceID || null }
             ]
         );
@@ -414,7 +438,7 @@ export const getFanByID = async (req, res) => {
         const locationQuery = `SELECT * FROM FanSensors WHERE ID = @ID`;
         const result = await executeQuery(locationQuery, [{ name: 'ID', value: id }]);
         if (result.recordset.length === 0)
-            return res.status(404).json({ success: false, message: 'Fan sensor not found' }); 
+            return res.status(404).json({ success: false, message: 'Fan sensor not found' });
         res.status(200).json({ success: true, data: result.recordset[0] });
     } catch (error) {
         console.error('Connection error:', error);
