@@ -1,4 +1,6 @@
 import { executeQuery } from '../utils/executeQuery.js';
+import { publishFanSettings } from '../mqttHandlers/fanHandler.js';
+import client from '../mqtt/mqttClient.js';
 
 // ---- TEMPERATURE SENSOR DATA ----------------------------------------------------------------------------------------------------
 
@@ -365,6 +367,23 @@ export const getFanData = async (req, res) => {
 };
 
 // POST /temperature/fan
+export async function handleFanControl(userId, location, deviceId, desiredMode) {
+    try {
+        const fanMode = desiredMode?.toLowerCase();
+
+        if (!fanMode) {
+            console.error('Error: fanMode is undefined');
+            return;
+        }
+
+        await publishFanSettings(client, userId, location, deviceId, { fanMode });
+
+        console.log(`Fan command sent for ${location} (${deviceId}): mode=${fanMode}`);
+    } catch (error) {
+        console.error('Error handling fan control:', error);
+    }
+}
+/*
 export const addFanActivity = async (req, res) => {
     try {
         const { Activation, FanMode, FanSpeed: inputFanSpeed, DeviceID } = req.body;
@@ -413,6 +432,7 @@ export const addFanActivity = async (req, res) => {
         res.status(500).json({ success: false, message: error.message || 'Failed to add fan activity record.' });
     }
 };
+*/
 
 // DELETE
 //...

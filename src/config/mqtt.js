@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import { executeQuery } from '../utils/executeQuery.js';
 import { handleRfidScan, handleAssignRfid } from '../mqttHandlers/rfidHandlers.js';
 import { handleTemperaturInput } from '../mqttHandlers/temperatureHandlers.js';
-import { handleFanStateInput } from '../mqttHandlers/fanHandler.js';
+import { handleFanStateInput, publishFanSettings } from '../mqttHandlers/fanHandler.js';
 
 dotenv.config();
 
@@ -36,7 +36,6 @@ client.on('connect', () => {
         else console.log(`Subscribed to ${granted.map(g => g.topic).join(', ')}`);
     });
 });
-
 
 client.on('error', (err) => {
     console.error('MQTT Client error:', err);
