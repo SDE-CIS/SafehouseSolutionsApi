@@ -7,11 +7,11 @@ import client from "./config/mqtt.js";
 import authRoutes from './routes/auth.js';
 import keycardRoutes from './routes/keycards.js';
 import locationsRoutes from './routes/locations.js';
-import sensorTypesRoutes from './routes/sensorType.js';
-import temperatureSensorRoutes from './routes/temperatureSensor.js';
+import temperatureRoutes from './routes/temperature.js';
 import unitsRoutes from './routes/units.js';
 import usersRoutes from './routes/users.js';
 import videosRoutes from './routes/videos.js';
+import cameraRoutes from './routes/camera.js';
 
 dotenv.config();
 
@@ -29,11 +29,11 @@ app.use("/uploads", express.static(path.resolve("uploads")));
 app.use('/auth', authRoutes);
 app.use('/keycards', keycardRoutes);
 app.use('/locations', locationsRoutes);
-app.use('/sensor', sensorTypesRoutes);
-app.use('/temperature', temperatureSensorRoutes);
+app.use('/temperature', temperatureRoutes);
 app.use('/units', unitsRoutes);
 app.use('/users', usersRoutes);
 app.use("/videos", videosRoutes);
+app.use("/camera", cameraRoutes);
 
 app.get('/', (req, res) => {
   res.send('Safehouse Solutions API is running');

@@ -1,5 +1,6 @@
 import { executeQuery } from '../utils/executeQuery.js';
 
+// Subscribe
 export async function handleTemperaturInput(topic, message, client) {
     try {
         // Extract userId from the topic (first part)
@@ -36,5 +37,24 @@ export async function handleTemperaturInput(topic, message, client) {
 
     } catch (err) {
         console.error('Unexpected error in handletemperatureInsert:', err);
+    }
+}
+
+// Publish
+export async function publishTemperatureSettings(client, userId, location, deviceId, settings) {
+    try {
+        const topic = `${userId}/temperatur/${location}/${deviceId}/settings`;
+        const payload = JSON.stringify(settings);
+        console.log(`Publishing temperature settings: ${payload}`);
+
+        client.publish(topic, payload, { qos: 1 }, (err) => {
+            if (err) {
+                console.error('Failed to publish temperature settings:', err);
+            } else {
+                console.log(`Temperature settings published successfully to ${topic}`);
+            }
+        });
+    } catch (err) {
+        console.error('Unexpected error in publishTemperatureSettings:', err);
     }
 }
