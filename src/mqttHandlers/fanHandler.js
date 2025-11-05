@@ -12,7 +12,7 @@ export async function handleFanStateInput(topic, message, client) {
         const msgStr = message.toString();
         let payload;
 
-        console.log(`Message recived on topic: ${topic}`);
+        console.log(`Message recieved on topic: ${topic}`);
 
         try {
             payload = JSON.parse(msgStr);
@@ -78,8 +78,6 @@ export async function publishFanSettings(client, userId, location, deviceId, set
     try {
         const topic = `${userId}/fan/${location}/${deviceId}/settings`;
         const payload = JSON.stringify(settings);
-
-        console.log(`Publishing fan settings to topic: ${topic}`);
         console.log(`Payload: ${payload}`);
 
         client.publish(topic, payload, { qos: 1 }, (err) => {
