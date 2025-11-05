@@ -370,17 +370,17 @@ export const getFanData = async (req, res) => {
 // MQTT POST /temperature/fan
 export const postFanControl = async (req, res) => {
     try {
-        const { Activation, Location, DeviceID, FanMode } = req.body;
+        const { Location, DeviceID, FanMode } = req.body;
 
-        if (!Activation || !Location || !DeviceID || !FanMode) {
+        if ( !Location || !DeviceID || !FanMode) {
             return res.status(400).json({
                 success: false,
-                message: 'Missing required fields: Activation, Location, DeviceID, or fanMode',
+                message: 'Missing required fields: Location, DeviceID, or fanMode',
             });
         }
 
         const settings = { fanMode: FanMode.toLowerCase() };
-        await publishFanSettings(client, Activation, Location, DeviceID, settings);
+        await publishFanSettings(client, Location, DeviceID, settings);
         res.status(200).json({ success: true });
     } catch (error) {
         console.error('Error handling fan control:', error);
