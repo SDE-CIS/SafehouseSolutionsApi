@@ -375,11 +375,12 @@ export const postFanControl = async (req, res) => {
         if (!Activation || !Location || !DeviceID || !FanMode) {
             return res.status(400).json({
                 success: false,
-                message: 'Missing required fields: Activation, Location, DeviceID, or FanMode',
+                message: 'Missing required fields: Activation, Location, DeviceID, or fanMode',
             });
         }
 
-        await publishFanSettings(client, Activation, Location, DeviceID, FanMode.toLowerCase());
+        const settings = { fanMode: FanMode.toLowerCase() };
+        await publishFanSettings(client, Activation, Location, DeviceID, settings);
         res.status(200).json({ success: true });
     } catch (error) {
         console.error('Error handling fan control:', error);
