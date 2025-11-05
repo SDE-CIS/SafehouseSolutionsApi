@@ -1,4 +1,7 @@
 import { executeQuery } from '../utils/executeQuery.js';
+import { publishFanSettings } from '../mqttHandlers/fanHandler.js';
+import { publishTemperatureSettings } from '../mqttHandlers/temperatureHandlers.js';
+import client from '../config/mqtt.js';
 
 // ---- TEMPERATURE SENSOR DATA ----------------------------------------------------------------------------------------------------
 
@@ -252,28 +255,28 @@ export const getTemperatureSettingByID = async (req, res) => {
     }
 };
 
-// POST /temperature/device/setting
+// MQTT POST /temperature/device/setting
 export const addTemperatureSetting = async (req, res) => {
     try {
-        const { MaxTemperature, NormalTemperature, MinTemperature, DeviceID } = req.body;
+        const { UserID, Location, DeviceID, MaxTemperature, NormalTemperature, MinTemperature } = req.body;
 
-        await executeQuery(
-            `
-            INSERT INTO TemperatureSettings (MaxTemperature, NormalTemperature, MinTemperature, DeviceID)
-            VALUES (@MaxTemperature, @NormalTemperature, @MinTemperature, @DeviceID);
-            `,
-            [
-                { name: 'MaxTemperature', value: MaxTemperature },
-                { name: 'NormalTemperature', value: NormalTemperature },
-                { name: 'MinTemperature', value: MinTemperature },
-                { name: 'DeviceID', value: DeviceID }
-            ]
-        );
+        if (!UserID || !Location || !DeviceID || MaxTemperature == null || NormalTemperature == null || MinTemperature == null
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields: UserID, Location, DeviceID, MaxTemperature, NormalTemperature, or MinTemperature',
+            });
+        }
 
-        res.status(201).json({ success: true, message: 'New temperature setting registered successfully!' });
+        const settings = { MaxTemperature, NormalTemperature, MinTemperature };
+        await publishTemperatureSettings(client, UserID, Location, DeviceID, settings);
+        res.status(200).json({ success: true });
     } catch (error) {
-        console.error('Add new temperature device error:', error);
-        res.status(500).json({ success: false, message: error.message || 'Failed to register new temperature setting.' });
+        console.error('Error handling temperature settings:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Error handling temperature settings',
+        });
     }
 };
 
@@ -364,53 +367,26 @@ export const getFanData = async (req, res) => {
     }
 };
 
-// POST /temperature/fan
-export const addFanActivity = async (req, res) => {
+// MQTT POST /temperature/fan
+export const postFanControl = async (req, res) => {
     try {
-        const { Activation, FanMode, FanSpeed: inputFanSpeed, DeviceID } = req.body;
+        const { Activation, Location, DeviceID, FanMode } = req.body;
 
-        const validFanModes = ['on', 'off', 'auto'];
-        if (!validFanModes.includes(FanMode?.toLowerCase())) {
+        if (!Activation || !Location || !DeviceID || !FanMode) {
             return res.status(400).json({
                 success: false,
-                message: `Invalid FanMode value. Must be one of: ${validFanModes.join(', ')}.`
+                message: 'Missing required fields: Activation, Location, DeviceID, or FanMode',
             });
         }
 
-        let FanOn;
-        let FanSpeed = inputFanSpeed || 0;
-
-        switch (FanMode.toLowerCase()) {
-            case 'off':
-                FanOn = 0;
-                FanSpeed = 0;
-                break;
-            case 'on':
-                FanOn = 1;
-                break;
-            case 'auto':
-                FanOn = null;
-                break;
-        }
-
-        await executeQuery(
-            `
-            INSERT INTO FanData (Activation, ActivationTimestamp, FanOn, FanSpeed, FanMode, DeviceID)
-            VALUES (@Activation, GETDATE(), @FanOn, @FanSpeed, @FanMode, @DeviceID);
-            `,
-            [
-                { name: 'Activation', value: Activation || null },
-                { name: 'FanOn', value: FanOn },
-                { name: 'FanSpeed', value: FanSpeed },
-                { name: 'FanMode', value: FanMode.toLowerCase() },
-                { name: 'DeviceID', value: DeviceID || null }
-            ]
-        );
-
-        res.status(201).json({ success: true, message: 'Fan activity record added successfully!' });
+        await publishFanSettings(client, Activation, Location, DeviceID, FanMode.toLowerCase());
+        res.status(200).json({ success: true });
     } catch (error) {
-        console.error('Add fan activity error:', error);
-        res.status(500).json({ success: false, message: error.message || 'Failed to add fan activity record.' });
+        console.error('Error handling fan control:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Error handling fan control',
+        });
     }
 };
 
