@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { handleRfidScan, handleAssignRfid } from '../mqttHandlers/rfidHandlers.js';
 import { handleTemperaturInput } from '../mqttHandlers/temperatureHandlers.js';
 import { handleFanStateInput } from '../mqttHandlers/fanHandler.js';
+import { handleCameraAlertsInput } from '../mqttHandlers/cameraHandler.js';
 
 dotenv.config();
 
@@ -23,7 +24,8 @@ const topicHandlers = {
     '+/rfid/frontdoor/1/scan': handleRfidScan,
     'rfid/assign': handleAssignRfid,
     '+/temperatur/+/+': handleTemperaturInput,
-    '+/temperatur/+/+': handleFanStateInput
+    '+/temperatur/+/+': handleFanStateInput,
+    '+/camera/+/+': handleCameraAlertsInput
 }
 const topics = Object.keys(topicHandlers);
 
