@@ -1,5 +1,6 @@
 import { executeQuery } from '../utils/executeQuery.js';
 import { publishFanSettings } from '../mqttHandlers/fanHandler.js';
+import { publishTemperatureSettings } from '../mqttHandlers/temperatureHandlers.js';
 import client from '../config/mqtt.js';
 
 // ---- TEMPERATURE SENSOR DATA ----------------------------------------------------------------------------------------------------
@@ -254,28 +255,28 @@ export const getTemperatureSettingByID = async (req, res) => {
     }
 };
 
-// POST /temperature/device/setting
+// MQTT POST /temperature/device/setting
 export const addTemperatureSetting = async (req, res) => {
     try {
-        const { MaxTemperature, NormalTemperature, MinTemperature, DeviceID } = req.body;
+        const { UserID, Location, DeviceID, MaxTemperature, NormalTemperature, MinTemperature } = req.body;
 
-        await executeQuery(
-            `
-            INSERT INTO TemperatureSettings (MaxTemperature, NormalTemperature, MinTemperature, DeviceID)
-            VALUES (@MaxTemperature, @NormalTemperature, @MinTemperature, @DeviceID);
-            `,
-            [
-                { name: 'MaxTemperature', value: MaxTemperature },
-                { name: 'NormalTemperature', value: NormalTemperature },
-                { name: 'MinTemperature', value: MinTemperature },
-                { name: 'DeviceID', value: DeviceID }
-            ]
-        );
+        if (!UserID || !Location || !DeviceID || MaxTemperature == null || NormalTemperature == null || MinTemperature == null
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields: UserID, Location, DeviceID, MaxTemperature, NormalTemperature, or MinTemperature',
+            });
+        }
 
-        res.status(201).json({ success: true, message: 'New temperature setting registered successfully!' });
+        const settings = { MaxTemperature, NormalTemperature, MinTemperature };
+        await publishTemperatureSettings(client, UserID, Location, DeviceID, settings);
+        res.status(200).json({ success: true });
     } catch (error) {
-        console.error('Add new temperature device error:', error);
-        res.status(500).json({ success: false, message: error.message || 'Failed to register new temperature setting.' });
+        console.error('Error handling temperature settings:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Error handling temperature settings',
+        });
     }
 };
 
@@ -366,7 +367,7 @@ export const getFanData = async (req, res) => {
     }
 };
 
-// POST /temperature/fan
+// MQTT POST /temperature/fan
 export const postFanControl = async (req, res) => {
     try {
         const { Activation, Location, DeviceID, FanMode } = req.body;
