@@ -47,4 +47,29 @@ export const addFanActivity = async (req, res) => {
         res.status(500).json({ success: false, message: error.message || 'Failed to add fan activity record.' });
     }
 };
+
+// POST /temperature/device/setting
+export const addTemperatureSetting = async (req, res) => {
+    try {
+        const { MaxTemperature, NormalTemperature, MinTemperature, DeviceID } = req.body;
+
+        await executeQuery(
+            `
+            INSERT INTO TemperatureSettings (MaxTemperature, NormalTemperature, MinTemperature, DeviceID)
+            VALUES (@MaxTemperature, @NormalTemperature, @MinTemperature, @DeviceID);
+            `,
+            [
+                { name: 'MaxTemperature', value: MaxTemperature },
+                { name: 'NormalTemperature', value: NormalTemperature },
+                { name: 'MinTemperature', value: MinTemperature },
+                { name: 'DeviceID', value: DeviceID }
+            ]
+        );
+
+        res.status(201).json({ success: true, message: 'New temperature setting registered successfully!' });
+    } catch (error) {
+        console.error('Add new temperature device error:', error);
+        res.status(500).json({ success: false, message: error.message || 'Failed to register new temperature setting.' });
+    }
+};
 */
