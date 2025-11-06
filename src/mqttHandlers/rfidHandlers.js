@@ -72,6 +72,7 @@ export async function handleAssignRfid(topic, message, client) {
             return;
         }
 
+        if(payload.status === "unassigned"){
         if (payload.status === "unassigned") {
             const responseTopic = `rfid/assign`;
             const responsePayload = JSON.stringify({ userId: 1 });

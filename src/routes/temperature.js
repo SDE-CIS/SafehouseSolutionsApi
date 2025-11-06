@@ -3,20 +3,19 @@ import {
     getTemperatureData, addTemperatureData, deleteTemperatureData,
     getTemperatureDevices, getTemperatureDeviceByID, addTemperatureDevice, updateTemperatureDevice, deleteTemperatureDevice,
     getTemperatureSettings, getTemperatureSettingByID, addTemperatureSetting, updateTemperatureSetting, deleteTemperatureSetting,
-    getFans, getFanByID, addFanDevice, updateFan, deleteFan,
+    getUsersFans, addFanDevice, updateFan, deleteFan,
     getFanData, postFanControl
 } from '../controllers/temperatureController.js';
 const router = Router();
 
 router.get('/', getTemperatureData);
-router.get('/device', getTemperatureDevices);
+router.get('/device/:userId', getTemperatureDevices);
 router.get('/device/setting', getTemperatureSettings);
 router.get('/device/setting/:id', getTemperatureSettingByID);
 router.get('/device/:id', getTemperatureDeviceByID);
 
 router.get('/fan', getFanData);
-router.get('/fan/device', getFans);
-router.get('/fan/device/:id', getFanByID);
+router.get('/fan/device/:userId', getUsersFans);
 
 router.post('/', addTemperatureData);
 router.post('/device', addTemperatureDevice);
