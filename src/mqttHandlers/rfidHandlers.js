@@ -5,7 +5,6 @@ export async function handleRfidScan(topic, message, client) {
         // Extract userId from the topic (first part)
         const topicParts = topic.split('/');
         const userIdFromTopic = topicParts[0];
-
         const msgStr = message.toString();
         let payload;
 
@@ -66,7 +65,6 @@ export async function handleAssignRfid(topic, message, client) {
             console.error(`Failed to parse MQTT message as JSON: ${msgStr}`);
             return;
         }
-
 
         if(payload.status === "unassigned"){
             const responseTopic = `rfid/assign`;
