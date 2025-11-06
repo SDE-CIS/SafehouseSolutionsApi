@@ -84,3 +84,21 @@ export async function handleAssignRfid(topic, message, client) {
         console.error('Unexpected error in handleAssignRfid:', err);
     }
 }
+
+export async function publishRfidLockState(client, userId, location, deviceId, isLocked) {
+    try {
+        const topic = `${userId}/rfid/${location}/${deviceId}/settings`;
+        const payload = JSON.stringify({ isLocked: isLocked });
+        console.log(`Payload: ${payload}`);
+
+        client.publish(topic, payload, { qos: 1 }, (err) => {
+            if (err) {
+                console.error(`Failed to publish rfid lock state settings:`, err);
+            } else {
+                console.log(`Rfid lock settings published successfully to ${topic}`);
+            }
+        });
+    } catch (err) {
+        console.error('Unexpected error in publishRfidLockState:', err);
+    }
+}
