@@ -55,7 +55,7 @@ export async function handleRfidScan(topic, message, client) {
             }
 
             const locationId = locationResult.recordset[0].ID;
-            await createAccessLog({ KeycardID: keycardId, LocationID: locationId });
+            await createAccessLog({ KeycardID: keycardId, LocationID: locationId, Granted: authorised });
             console.log(`Access log added for KeycardID ${keycardId} at LocationID ${locationId}`);
         }
     } catch (err) {
