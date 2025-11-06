@@ -45,19 +45,16 @@ export async function handleRfidScan(topic, message, client) {
             else console.log(`Published authorization to ${responseTopic}: ${responsePayload}`);
         });
 
-        if (keycardId) {
-            // get location id from location name
-            const locationQuery = 'SELECT ID FROM Locations WHERE LocationName = @name';
-            const locationResult = await executeQuery(locationQuery, [{ name: 'name', value: locationNameFromTopic }]);
-            if (locationResult.recordset.length === 0) {
-                console.error(`Location not found for name: ${locationNameFromTopic}`);
-                return;
-            }
-
-            const locationId = locationResult.recordset[0].ID;
-            await createAccessLog({ KeycardID: keycardId, LocationID: locationId, Granted: authorised });
-            console.log(`Access log added for KeycardID ${keycardId} at LocationID ${locationId}`);
+        const locationQuery = 'SELECT ID FROM Locations WHERE LocationName = @name';
+        const locationResult = await executeQuery(locationQuery, [{ name: 'name', value: locationNameFromTopic }]);
+        if (locationResult.recordset.length === 0) {
+            console.error(`Location not found for name: ${locationNameFromTopic}`);
+            return;
         }
+
+        const locationId = locationResult.recordset[0].ID;
+        await createAccessLog({ RfidTag: rfidTag, LocationID: locationId, Granted: authorised });
+        console.log(`Access log added for RfidTag ${rfidTag} at LocationID ${locationId}, Granted: ${authorised}`);
     } catch (err) {
         console.error('Unexpected error in handleRfidScan:', err);
     }

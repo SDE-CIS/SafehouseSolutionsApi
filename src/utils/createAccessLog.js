@@ -1,14 +1,14 @@
 import { executeQuery } from '../utils/executeQuery.js';
 
-export async function createAccessLog({ KeycardID, LocationID, Granted }) {
+export async function createAccessLog({ RfidTag, LocationID, Granted }) {
     try {
         await executeQuery(
             `
-      INSERT INTO AccessLog (AccessTime, KeycardID, LocationID, Granted)
-      VALUES (GETDATE(), @KeycardID, @LocationID, @Granted);
+      INSERT INTO AccessLog (AccessTime, RfidTag, LocationID, Granted)
+      VALUES (GETDATE(), @RfidTag, @LocationID, @Granted);
       `,
             [
-                { name: 'KeycardID', value: KeycardID },
+                { name: 'RfidTag', value: RfidTag },
                 { name: 'LocationID', value: LocationID },
                 { name: 'Granted', value: Granted }
             ]
