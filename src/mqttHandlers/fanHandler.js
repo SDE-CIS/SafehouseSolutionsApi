@@ -21,7 +21,7 @@ export async function handleFanStateInput(topic, message, client) {
             return;
         }
 
-        const { Activation, fanOn, fanSpeed: inputFanSpeed, fanMode } = payload;
+        const { fanOn, fanSpeed: inputFanSpeed, fanMode } = payload;
 
         if (!fanOn && !inputFanSpeed && !fanMode) {
             console.error(`Fan data not found in message: ${msgStr}`);
@@ -55,12 +55,11 @@ export async function handleFanStateInput(topic, message, client) {
         }
 
         const query = `
-            INSERT INTO FanData (Activation, ActivationTimestamp, FanOn, FanSpeed, FanMode, DeviceID)
-            VALUES (@Activation, GETDATE(), @FanOn, @FanSpeed, @FanMode, @DeviceID);
+            INSERT INTO FanData (ActivationTimestamp, FanOn, FanSpeed, FanMode, DeviceID)
+            VALUES (GETDATE(), @FanOn, @FanSpeed, @FanMode, @DeviceID);
         `;
 
         await executeQuery(query, [
-            { name: 'Activation', value: Activation || null },
             { name: 'FanOn', value: FanOn },
             { name: 'FanSpeed', value: FanSpeed },
             { name: 'FanMode', value: FanMode },
