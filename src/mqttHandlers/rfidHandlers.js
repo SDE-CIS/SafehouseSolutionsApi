@@ -60,15 +60,15 @@ export async function handleAssignRfid(topic, message, client) {
         const msgStr = message.toString();
         let payload;
 
-        try{
+        try {
             payload = JSON.parse(msgStr)
-        } catch (jsonErr){
+        } catch (jsonErr) {
             console.error(`Failed to parse MQTT message as JSON: ${msgStr}`);
             return;
         }
 
 
-        if(payload.status === "unassigned"){
+        if (payload.status === "unassigned") {
             const responseTopic = `rfid/assign`;
             const responsePayload = JSON.stringify({ userId: 1 });
 
