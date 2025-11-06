@@ -24,7 +24,7 @@ const topicHandlers = {
     '+/rfid/+/+/scan': handleRfidScan,
     'rfid/assign': handleAssignRfid,
     '+/temperatur/+/+': handleTemperaturInput,
-    '+/temperatur/+/+': handleFanStateInput,
+    '+/fan/+/+': handleFanStateInput,
     '+/camera/+/+': handleCameraAlertsInput
 }
 const topics = Object.keys(topicHandlers);

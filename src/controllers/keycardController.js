@@ -1,7 +1,5 @@
 import { executeQuery } from '../utils/executeQuery.js';
-import { publishRfidLockState } from '../mqttHandlers/rfidHandlers.js';
-import client from '../config/mqtt.js';
-
+import { createAccessLog } from '../utils/createAccessLog.js';
 
 // ---- KEYCARDS ----------------------------------------------------------------------------------------------------
 
@@ -189,16 +187,7 @@ export const addAccessLog = async (req, res) => {
     try {
         const { KeycardID, LocationID } = req.body;
 
-        await executeQuery(
-            `
-            INSERT INTO AccessLog (AccessTime, KeycardID, LocationID)
-            VALUES (GETDATE(), @KeycardID, @LocationID);
-            `,
-            [
-                { name: 'KeycardID', value: KeycardID },
-                { name: 'LocationID', value: LocationID }
-            ]
-        );
+        await createAccessLog({ KeycardID, LocationID });
 
         res.status(201).json({ success: true, message: 'Access log record added successfully!' });
     } catch (error) {
