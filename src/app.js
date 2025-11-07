@@ -8,7 +8,6 @@ import authRoutes from './routes/auth.js';
 import keycardRoutes from './routes/keycards.js';
 import locationsRoutes from './routes/locations.js';
 import temperatureRoutes from './routes/temperature.js';
-import unitsRoutes from './routes/units.js';
 import usersRoutes from './routes/users.js';
 import videosRoutes from './routes/videos.js';
 import cameraRoutes from './routes/camera.js';
