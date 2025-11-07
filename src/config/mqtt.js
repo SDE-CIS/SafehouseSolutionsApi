@@ -21,7 +21,7 @@ if (!brokerUrl) {
 const client = mqtt.connect(brokerUrl, mqttOptions);
 
 const topicHandlers = {
-    '+/rfid/frontdoor/1/scan': handleRfidScan,
+    '+/rfid/+/+/scan': handleRfidScan,
     'rfid/assign': handleAssignRfid,
     '+/temperatur/+/+': handleTemperaturInput,
     '+/fan/+/+': handleFanStateInput,

@@ -354,3 +354,25 @@ export const deleteKeycardStatus = async (req, res) => {
         res.status(400).json({ message: 'Failed to delete keycard status.' });
     }
 };
+
+export const updateSmartLockState = async (req, res) => {
+    try {
+        const { UserID, Location, DeviceID, isLocked } = req.body;
+
+        if (!UserID || !Location || !DeviceID || isLocked === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields: UserID, Location, DeviceID, or isLocked',
+            });
+        }
+
+        await publishRfidLockState(client, UserID, Location, DeviceID, isLocked);
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.error('Error handling rfid lock settings:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Error handling rfid lock settings',
+        });
+    }
+}
