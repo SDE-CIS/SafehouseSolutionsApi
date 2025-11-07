@@ -8,6 +8,7 @@ const router = Router();
 
 router.get('/', getKeycards);
 router.get('/logs', getAccessLogs);
+router.get('/name/:id', getKeycardOwners);
 router.get('/status', getKeycardsStatuses);
 router.get('/status/:id', getKeycardsStatusesByID);
 router.get('/:id', getKeycardById);

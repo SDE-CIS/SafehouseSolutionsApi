@@ -6,10 +6,8 @@ import { generateVideoThumbnail } from "../utils/generateVideoThumbnail.js";
 const AZURE_BLOB_URL = process.env.AZURE_BLOB_URL;
 const AZURE_SAS_TOKEN = process.env.AZURE_SAS_TOKEN;
 const AZURE_CONTAINER = "videos";
-
 const blobService = new BlobServiceClient(`${AZURE_BLOB_URL}?${AZURE_SAS_TOKEN}`);
 const containerClient = blobService.getContainerClient(AZURE_CONTAINER);
-
 const THUMB_DIR = path.join(process.cwd(), "temp", "thumbs");
 
 export const listVideos = async (req, res) => {
@@ -29,18 +27,13 @@ export const listVideos = async (req, res) => {
                     ? `${baseUrl}/videos/thumbnail/${thumbFile}`
                     : `${baseUrl}/public/images/thumbnail-placeholder.jpg`;
 
-                // Kick off thumbnail generation in the background
                 if (!fs.existsSync(thumbPath)) {
                     generateVideoThumbnail(name)
                         .then(() => console.log(`Generated thumbnail for ${name}`))
                         .catch((e) => console.warn(`Thumbnail failed for ${name}:`, e.message));
                 }
 
-                return {
-                    name,
-                    url: `${baseUrl}/videos/stream/${encodeURIComponent(name)}`,
-                    thumbnail: thumbnailUrl,
-                };
+                return { name, url: `${baseUrl}/videos/stream/${encodeURIComponent(name)}`, thumbnail: thumbnailUrl };
             })
         );
 
@@ -55,11 +48,8 @@ export const getThumbnail = async (req, res) => {
     try {
         const { name } = req.params;
         const thumbPath = path.join(THUMB_DIR, name);
-
-        if (!fs.existsSync(thumbPath)) {
+        if (!fs.existsSync(thumbPath))
             return res.status(404).send("Thumbnail not found");
-        }
-
         res.sendFile(thumbPath);
     } catch (err) {
         console.error("Thumbnail error:", err.message);
@@ -73,11 +63,9 @@ export const streamVideo = async (req, res) => {
         const blobClient = containerClient.getBlobClient(name);
         const exists = await blobClient.exists();
         if (!exists) return res.status(404).send("Video not found");
-
         const blobProps = await blobClient.getProperties();
         const contentType = blobProps.contentType || "video/mp4";
         const download = await blobClient.download();
-
         res.setHeader("Content-Type", contentType);
         res.setHeader("Accept-Ranges", "bytes");
         download.readableStreamBody.pipe(res);

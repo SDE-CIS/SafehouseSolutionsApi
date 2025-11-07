@@ -5,12 +5,9 @@ const router = Router();
 
 router.get('/', getUsers);
 router.get('/:id', getUsersByID);
-
 router.post('/', addUser);
-
 router.put('/:id', updateUser);
 router.put("/avatar/:id", upload.single("file"), updateUserProfilePicture);
-
 router.delete('/:id', deleteUser)
 
 export default router;

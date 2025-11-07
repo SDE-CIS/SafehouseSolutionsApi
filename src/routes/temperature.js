@@ -1,6 +1,6 @@
 import Router from 'express';
 import {
-    getTemperatureData, addTemperatureData, deleteTemperatureData,
+    getTemperatureData, addTemperatureData, getLatestTemperature, deleteTemperatureData,
     getTemperatureDevices, getTemperatureDeviceByID, addTemperatureDevice, updateTemperatureDevice, deleteTemperatureDevice,
     getTemperatureSettings, getTemperatureSettingByID, addTemperatureSetting, updateTemperatureSetting, deleteTemperatureSetting,
     getUsersFans, addFanDevice, updateFan, deleteFan,
@@ -9,11 +9,11 @@ import {
 const router = Router();
 
 router.get('/', getTemperatureData);
-router.get('/device/:userId', getTemperatureDevices);
+router.get('/latest', getLatestTemperature);
 router.get('/device/setting', getTemperatureSettings);
 router.get('/device/setting/:id', getTemperatureSettingByID);
+router.get('/device/:userId', getTemperatureDevices);
 router.get('/device/:id', getTemperatureDeviceByID);
-
 router.get('/fan', getFanData);
 router.get('/fan/device/:userId', getUsersFans);
 

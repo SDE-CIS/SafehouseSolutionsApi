@@ -33,13 +33,36 @@ export const getKeycardById = async (req, res) => {
         `;
 
         const result = await executeQuery(keycardQuery, [{ name: 'ID', value: id }]);
-
         if (result.recordset.length === 0)
             return res.status(404).json({ success: false, message: 'Keycard not found' });
-
         res.status(200).json({ success: true, data: result.recordset[0] });
     } catch (error) {
         console.error('Error fetching unit by ID:', error);
+        res.status(500).json({ success: false, message: error.message || error });
+    }
+};
+
+// GET /keycards/name/:id
+export const getKeycardOwners = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const query = `
+            SELECT 
+                u.FirstName, 
+                u.LastName
+            FROM Users u
+            INNER JOIN Keycards k ON k.UserID = u.ID
+            WHERE k.ID = @id
+        `;
+
+        const result = await executeQuery(query, [{ name: 'id', type: 'Int', value: id }]);
+        if (result.recordset.length === 0)
+            return res.status(404).json({ success: false, message: 'No owners found for this keycard' });
+        const ownersString = result.recordset.map(owner => `${owner.FirstName} ${owner.LastName}`).join(', ');
+        res.status(200).json({ success: true, owners: ownersString });
+    } catch (error) {
+        console.error('Connection error:', error);
         res.status(500).json({ success: false, message: error.message || error });
     }
 };
