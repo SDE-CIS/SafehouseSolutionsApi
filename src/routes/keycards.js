@@ -1,6 +1,7 @@
 import Router from 'express';
 import {
     getKeycards, getAccessLogs, getKeycardById, addKeycard, updateKeycard, deleteKeycard,
+    getKeycardOwners,
     getKeycardsStatuses, getKeycardsStatusesByID, addKeycardStatus, updateKeycardStatus, deleteKeycardStatus,
     updateSmartLockState
 } from '../controllers/keycardController.js';
