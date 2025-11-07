@@ -24,6 +24,4 @@ router.put('/status/:id', updateKeycardStatus);
 router.delete('/:id', deleteKeycard);
 router.delete('/status/:id', deleteKeycardStatus);
 
-
-
 export default router;
