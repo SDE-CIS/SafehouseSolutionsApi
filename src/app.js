@@ -25,12 +25,10 @@ const HOST = process.env.HOST || 'localhost';
 app.use(cors({ origin: '*', credentials: true }));
 
 app.use("/uploads", express.static(path.resolve("uploads")));
-
 app.use('/auth', authRoutes);
 app.use('/keycards', keycardRoutes);
 app.use('/locations', locationsRoutes);
 app.use('/temperature', temperatureRoutes);
-app.use('/units', unitsRoutes);
 app.use('/users', usersRoutes);
 app.use("/videos", videosRoutes);
 app.use("/camera", cameraRoutes);
