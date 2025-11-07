@@ -49,25 +49,18 @@ export const getKeycardOwners = async (req, res) => {
     try {
         const query = `
             SELECT 
-                u.ID, 
                 u.FirstName, 
-                u.LastName, 
-                u.PhoneNumber, 
-                u.Email, 
-                u.Username, 
-                u.ProfilePicture
+                u.LastName
             FROM Users u
             INNER JOIN Keycards k ON k.UserID = u.ID
             WHERE k.ID = @id
         `;
 
         const result = await executeQuery(query, [{ name: 'id', type: 'Int', value: id }]);
-
-        if (result.recordset.length === 0) {
+        if (result.recordset.length === 0)
             return res.status(404).json({ success: false, message: 'No owners found for this keycard' });
-        }
-
-        res.status(200).json({ success: true, data: result.recordset });
+        const ownersString = result.recordset.map(owner => `${owner.FirstName} ${owner.LastName}`).join(', ');
+        res.status(200).json({ success: true, owners: ownersString });
     } catch (error) {
         console.error('Connection error:', error);
         res.status(500).json({ success: false, message: error.message || error });

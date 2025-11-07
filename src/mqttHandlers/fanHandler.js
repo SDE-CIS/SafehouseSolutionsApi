@@ -5,10 +5,7 @@ export async function handleFanStateInput(topic, message, client) {
     try {
         // Extract userId from the topic (first part)
         const topicParts = topic.split('/');
-        //const userIdFromTopic = topicParts[0];
-        //const location = topicParts[2];
         const deviceId = parseInt(topicParts[3]);
-
         const msgStr = message.toString();
         let payload;
 

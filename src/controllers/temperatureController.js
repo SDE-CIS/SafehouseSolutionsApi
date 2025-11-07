@@ -4,7 +4,6 @@ import { publishTemperatureSettings } from '../mqttHandlers/temperatureHandlers.
 import client from '../config/mqtt.js';
 
 // ---- TEMPERATURE SENSOR DATA ----------------------------------------------------------------------------------------------------
-
 // GET /temperature
 export const getTemperatureData = async (req, res) => {
     try {
@@ -18,7 +17,18 @@ export const getTemperatureData = async (req, res) => {
 };
 
 // GET /temperature/latest
-// ...
+export const getLatestTemperature = async (req, res) => {
+    try {
+        const temperatureDataQuery = `SELECT TOP 1 * FROM TemperatureData ORDER BY TemperatureTimestamp DESC`;
+        const result = await executeQuery(temperatureDataQuery);
+        if (result.recordset.length === 0)
+            return res.status(404).json({ success: false, message: 'No temperature data found' });
+        res.status(200).json({ success: true, data: result.recordset[0] });
+    } catch (error) {
+        console.error('Connection error:', error);
+        res.status(500).json({ success: false, message: error.message || error });
+    }
+};
 
 // POST /temperature
 export const addTemperatureData = async (req, res) => {
@@ -28,10 +38,9 @@ export const addTemperatureData = async (req, res) => {
         if (!Temperature)
             return res.status(400).json({ success: false, message: 'Temperature is required.' });
 
-        await executeQuery(
-            `
-            INSERT INTO TemperatureData (Temperature, MeasurementTimestamp, DeviceID)
-            VALUES (@Temperature, GETDATE(), @DeviceID);
+        await executeQuery(`
+                INSERT INTO TemperatureData (Temperature, MeasurementTimestamp, DeviceID)
+                VALUES (@Temperature, GETDATE(), @DeviceID);
             `,
             [
                 { name: 'Temperature', value: Temperature },
@@ -75,15 +84,15 @@ export const deleteTemperatureData = async (req, res) => {
 
 // GET /temperature/device/:userId
 export const getTemperatureDevices = async (req, res) => {
-  const { userId } = req.params;
-  try {
-    const tdQuery = `SELECT * FROM TemperatureSensors WHERE UserID = @UserID`;
-    const result = await executeQuery(tdQuery, [{ name: 'UserID', value: userId }]);
-    res.status(200).json({ success: true, data: result.recordset });
-  } catch (error) {
-    console.error('Connection error:', error);
-    res.status(500).json({ success: false, message: error.message || error });
-  }
+    const { userId } = req.params;
+    try {
+        const tdQuery = `SELECT * FROM TemperatureSensors WHERE UserID = @UserID`;
+        const result = await executeQuery(tdQuery, [{ name: 'UserID', value: userId }]);
+        res.status(200).json({ success: true, data: result.recordset });
+    } catch (error) {
+        console.error('Connection error:', error);
+        res.status(500).json({ success: false, message: error.message || error });
+    }
 };
 
 // GET /temperature/device/:id
@@ -106,10 +115,9 @@ export const addTemperatureDevice = async (req, res) => {
     try {
         const { Active, LocationID, UserID } = req.body;
 
-        await executeQuery(
-            `
-            INSERT INTO TemperatureSensors (Active, DateAdded, LocationID, UserID)
-            VALUES (@Active, GETDATE(), @LocationID, @UserID);
+        await executeQuery(`
+                INSERT INTO TemperatureSensors (Active, DateAdded, LocationID, UserID)
+                VALUES (@Active, GETDATE(), @LocationID, @UserID);
             `,
             [
                 { name: 'Active', value: Active },
@@ -134,12 +142,11 @@ export const updateTemperatureDevice = async (req, res) => {
         if (Active === undefined || !LocationID || !UserID)
             return res.status(400).json({ message: 'Active, LocationID, and UserID are required.' });
 
-        const result = await executeQuery(
-            `
-            SELECT 
-                (SELECT COUNT(*) FROM TemperatureSensors WHERE ID = @ID) AS DeviceExists,
-                (SELECT COUNT(*) FROM Locations WHERE ID = @LocationID) AS LocationExists,
-                (SELECT COUNT(*) FROM Users WHERE ID = @UserID) AS UserExists
+        const result = await executeQuery(`
+                SELECT 
+                    (SELECT COUNT(*) FROM TemperatureSensors WHERE ID = @ID) AS DeviceExists,
+                    (SELECT COUNT(*) FROM Locations WHERE ID = @LocationID) AS LocationExists,
+                    (SELECT COUNT(*) FROM Users WHERE ID = @UserID) AS UserExists
             `,
             [
                 { name: 'ID', value: id },
@@ -152,10 +159,8 @@ export const updateTemperatureDevice = async (req, res) => {
 
         if (!record.DeviceExists)
             return res.status(404).json({ message: "Temperature device doesn't exist." });
-
         if (!record.LocationExists)
             return res.status(400).json({ message: 'Invalid LocationID — location not found.' });
-
         if (!record.UserExists)
             return res.status(400).json({ message: 'Invalid UserID — user not found.' });
 
@@ -165,22 +170,16 @@ export const updateTemperatureDevice = async (req, res) => {
         );
 
         const current = currentData.recordset[0];
-        if (
-            current.Active === Active &&
-            current.LocationID === LocationID &&
-            current.UserID === UserID
-        ) {
+        if (current.Active === Active && current.LocationID === LocationID && current.UserID === UserID)
             return res.status(200).json({ message: 'Temperature device is already up to date.' });
-        }
 
-        await executeQuery(
-            `
-            UPDATE TemperatureSensors
-            SET 
-                Active = @Active,
-                LocationID = @LocationID,
-                UserID = @UserID
-            WHERE ID = @ID;
+        await executeQuery(`
+                UPDATE TemperatureSensors
+                SET 
+                    Active = @Active,
+                    LocationID = @LocationID,
+                    UserID = @UserID
+                WHERE ID = @ID;
             `,
             [
                 { name: 'Active', value: Active },
@@ -261,8 +260,7 @@ export const addTemperatureSetting = async (req, res) => {
     try {
         const { UserID, Location, DeviceID, MaxTemperature, NormalTemperature, MinTemperature } = req.body;
 
-        if (!UserID || !Location || !DeviceID || MaxTemperature == null || NormalTemperature == null || MinTemperature == null
-        ) {
+        if (!UserID || !Location || !DeviceID || MaxTemperature == null || NormalTemperature == null || MinTemperature == null) {
             return res.status(400).json({
                 success: false,
                 message: 'Missing required fields: UserID, Location, DeviceID, MaxTemperature, NormalTemperature, or MinTemperature',
@@ -287,23 +285,19 @@ export const updateTemperatureSetting = async (req, res) => {
         const { id } = req.params;
         const { MaxTemperature, NormalTemperature, MinTemperature, DeviceID } = req.body;
 
-        if (!id) {
+        if (!id)
             return res.status(400).json({ success: false, message: 'Setting ID is required in the URL.' });
-        }
-
-        if (MaxTemperature == null || NormalTemperature == null || MinTemperature == null || !DeviceID) {
+        if (MaxTemperature == null || NormalTemperature == null || MinTemperature == null || !DeviceID)
             return res.status(400).json({ success: false, message: 'Missing required fields in request body.' });
-        }
 
-        const result = await executeQuery(
-            `
-            UPDATE TemperatureSettings
-            SET 
-                MaxTemperature = @MaxTemperature,
-                NormalTemperature = @NormalTemperature,
-                MinTemperature = @MinTemperature,
-                DeviceID = @DeviceID
-            WHERE ID = @ID;
+        const result = await executeQuery(`
+                UPDATE TemperatureSettings
+                SET 
+                    MaxTemperature = @MaxTemperature,
+                    NormalTemperature = @NormalTemperature,
+                    MinTemperature = @MinTemperature,
+                    DeviceID = @DeviceID
+                WHERE ID = @ID;
             `,
             [
                 { name: 'MaxTemperature', value: MaxTemperature },
@@ -314,10 +308,8 @@ export const updateTemperatureSetting = async (req, res) => {
             ]
         );
 
-        if (result.rowsAffected && result.rowsAffected[0] === 0) {
+        if (result.rowsAffected && result.rowsAffected[0] === 0)
             return res.status(404).json({ success: false, message: 'Temperature setting not found for the given SettingID.' });
-        }
-
         res.status(200).json({ success: true, message: 'Temperature setting updated successfully!' });
     } catch (error) {
         console.error('Update temperature device error:', error);
@@ -333,7 +325,6 @@ export const deleteTemperatureSetting = async (req, res) => {
         if (!id)
             return res.status(400).json({ success: false, message: 'Setting ID is required in the URL.' });
 
-        // Remove foreign key link
         await executeQuery(
             `UPDATE TemperatureSettings SET DeviceID = NULL WHERE ID = @ID;`,
             [{ name: 'ID', value: id }]
@@ -403,20 +394,18 @@ export const getUsersFans = async (req, res) => {
     const { userId } = req.params;
 
     try {
-        const fansQuery = `
-      SELECT 
-        fs.*, 
-        COALESCE(fd.fanMode, 'off') AS fanMode
-      FROM FanSensors fs
-      LEFT JOIN FanData fd 
-        ON fd.ID = (
-            SELECT TOP 1 ID
-            FROM FanData
-            WHERE DeviceID = fs.ID
-            ORDER BY ActivationTimestamp DESC
-        )
-      WHERE fs.UserID = @UserID;
-    `;
+        const fansQuery =`
+            SELECT fs.*, COALESCE(fd.fanMode, 'off') AS fanMode
+            FROM FanSensors fs
+            LEFT JOIN FanData fd 
+            ON fd.ID = (
+                SELECT TOP 1 ID
+                FROM FanData
+                WHERE DeviceID = fs.ID
+                ORDER BY ActivationTimestamp DESC
+            )
+            WHERE fs.UserID = @UserID;
+        `;
 
         const result = await executeQuery(fansQuery, [
             { name: 'UserID', value: userId }
@@ -430,7 +419,6 @@ export const getUsersFans = async (req, res) => {
         }
 
         res.status(200).json({ success: true, data: result.recordset });
-
     } catch (error) {
         console.error('Connection error:', error);
         res.status(500).json({
@@ -445,8 +433,7 @@ export const addFanDevice = async (req, res) => {
     try {
         const { Active, LocationID, UserID } = req.body;
 
-        await executeQuery(
-            `
+        await executeQuery(`
             INSERT INTO FanSensors (Active, DateAdded, LocationID, UserID)
             VALUES (@Active, GETDATE(), @LocationID, @UserID);
             `,
@@ -466,74 +453,74 @@ export const addFanDevice = async (req, res) => {
 
 // PUT /temperature/fan/device/:id
 export const updateFan = async (req, res) => {
-  try {
-    const DeviceID = req.params.id;
-    const { Active, LocationID, UserID, FanMode } = req.body;
+    try {
+        const DeviceID = req.params.id;
+        const { Active, LocationID, UserID, FanMode } = req.body;
 
-    const fanResult = await executeQuery(
-      `SELECT COUNT(*) AS FanExists FROM FanSensors WHERE ID = @DeviceID`,
-      [{ name: 'DeviceID', value: DeviceID }]
-    );
+        const fanResult = await executeQuery(
+            `SELECT COUNT(*) AS FanExists FROM FanSensors WHERE ID = @DeviceID`,
+            [{ name: 'DeviceID', value: DeviceID }]
+        );
 
-    if (!fanResult.recordset[0].FanExists)
-      return res.status(404).json({ message: "Fan device doesn't exist." });
+        if (!fanResult.recordset[0].FanExists)
+            return res.status(404).json({ message: "Fan device doesn't exist." });
 
-    if (UserID) {
-      const userResult = await executeQuery(
-        `SELECT COUNT(*) AS UserExists FROM Users WHERE ID = @UserID`,
-        [{ name: 'UserID', value: UserID }]
-      );
-      if (!userResult.recordset[0].UserExists)
-        return res.status(400).json({ message: 'User not found.' });
+        if (UserID) {
+            const userResult = await executeQuery(
+                `SELECT COUNT(*) AS UserExists FROM Users WHERE ID = @UserID`,
+                [{ name: 'UserID', value: UserID }]
+            );
+            if (!userResult.recordset[0].UserExists)
+                return res.status(400).json({ message: 'User not found.' });
+        }
+
+        if (LocationID) {
+            const locationResult = await executeQuery(
+                `SELECT COUNT(*) AS LocationExists FROM Locations WHERE ID = @LocationID`,
+                [{ name: 'LocationID', value: LocationID }]
+            );
+            if (!locationResult.recordset[0].LocationExists)
+                return res.status(400).json({ message: 'Location not found.' });
+        }
+
+        const updates = [];
+        const params = [{ name: 'DeviceID', value: DeviceID }];
+
+        if (Active !== undefined)
+            updates.push('Active = @Active'); params.push({ name: 'Active', value: Active });
+        if (UserID)
+            updates.push('UserID = @UserID'); params.push({ name: 'UserID', value: UserID });
+        if (LocationID)
+            updates.push('LocationID = @LocationID'); params.push({ name: 'LocationID', value: LocationID });
+        if (updates.length > 0)
+            await executeQuery(`UPDATE FanSensors SET ${updates.join(', ')} WHERE ID = @DeviceID`, params);
+
+        if (FanMode) {
+            await executeQuery(`
+                INSERT INTO FanData (DeviceID, fanMode, ActivationTimestamp)
+                VALUES (@DeviceID, @FanMode, GETDATE());
+                `,
+                [
+                    { name: 'DeviceID', value: DeviceID },
+                    { name: 'FanMode', value: FanMode }
+                ]
+            );
+
+            const locationName = LocationID
+                ? (await executeQuery(
+                    `SELECT LocationName FROM Locations WHERE ID = @LocationID`,
+                    [{ name: 'LocationID', value: LocationID }]
+                ))?.recordset[0]?.LocationName || '' : '';
+
+            const settings = { fanMode: FanMode.toLowerCase() };
+            await publishFanSettings(client, UserID, locationName.toLowerCase(), DeviceID, settings);
+        }
+
+        res.status(200).json({ message: 'Fan device updated successfully!' });
+    } catch (error) {
+        console.error('Update fan device error:', error);
+        res.status(500).json({ success: false, message: error.message || error });
     }
-
-    if (LocationID) {
-      const locationResult = await executeQuery(
-        `SELECT COUNT(*) AS LocationExists FROM Locations WHERE ID = @LocationID`,
-        [{ name: 'LocationID', value: LocationID }]
-      );
-      if (!locationResult.recordset[0].LocationExists)
-        return res.status(400).json({ message: 'Location not found.' });
-    }
-
-    const updates = [];
-    const params = [{ name: 'DeviceID', value: DeviceID }];
-
-    if (Active !== undefined)
-      updates.push('Active = @Active'); params.push({ name: 'Active', value: Active });
-    if (UserID)
-      updates.push('UserID = @UserID'); params.push({ name: 'UserID', value: UserID });
-    if (LocationID)
-      updates.push('LocationID = @LocationID'); params.push({ name: 'LocationID', value: LocationID });
-    if (updates.length > 0)
-      await executeQuery(`UPDATE FanSensors SET ${updates.join(', ')} WHERE ID = @DeviceID`, params);
-
-    if (FanMode) {
-      await executeQuery(
-        `INSERT INTO FanData (DeviceID, fanMode, ActivationTimestamp)
-         VALUES (@DeviceID, @FanMode, GETDATE());`,
-        [
-          { name: 'DeviceID', value: DeviceID },
-          { name: 'FanMode', value: FanMode }
-        ]
-      );
-
-      const locationName = LocationID
-        ? (await executeQuery(
-            `SELECT LocationName FROM Locations WHERE ID = @LocationID`,
-            [{ name: 'LocationID', value: LocationID }]
-          ))?.recordset[0]?.LocationName || ''
-        : '';
-
-      const settings = { fanMode: FanMode.toLowerCase() };
-      await publishFanSettings(client, UserID, locationName.toLowerCase(), DeviceID, settings);
-    }
-
-    res.status(200).json({ message: 'Fan device updated successfully!' });
-  } catch (error) {
-    console.error('Update fan device error:', error);
-    res.status(500).json({ success: false, message: error.message || error });
-  }
 };
 
 // DELETE /temperature/fan/device/:id

@@ -44,8 +44,7 @@ export const addUser = async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(Password, parseInt(process.env.BCRYPT_SALT_ROUNDS || '10'));
 
-        await executeQuery(
-            `
+        await executeQuery(`
             INSERT INTO Users (FirstName, LastName, PhoneNumber, Email, Username, Password)
             VALUES (@FirstName, @LastName, @PhoneNumber, @Email, @Username, @Password);
             `,
@@ -96,30 +95,19 @@ export const updateUser = async (req, res) => {
         const fields = [];
         const params = [{ name: 'ID', value: id }];
 
-        if (FirstName !== undefined) {
-            fields.push('FirstName = @FirstName');
-            params.push({ name: 'FirstName', value: FirstName });
-        }
-        if (LastName !== undefined) {
-            fields.push('LastName = @LastName');
-            params.push({ name: 'LastName', value: LastName });
-        }
-        if (PhoneNumber !== undefined) {
-            fields.push('PhoneNumber = @PhoneNumber');
-            params.push({ name: 'PhoneNumber', value: PhoneNumber });
-        }
-        if (Email !== undefined) {
-            fields.push('Email = @Email');
-            params.push({ name: 'Email', value: Email });
-        }
-        if (Username !== undefined) {
-            fields.push('Username = @Username');
-            params.push({ name: 'Username', value: Username });
-        }
+        if (FirstName !== undefined)
+            fields.push('FirstName = @FirstName'); params.push({ name: 'FirstName', value: FirstName });
+        if (LastName !== undefined)
+            fields.push('LastName = @LastName'); params.push({ name: 'LastName', value: LastName });
+        if (PhoneNumber !== undefined)
+            fields.push('PhoneNumber = @PhoneNumber'); params.push({ name: 'PhoneNumber', value: PhoneNumber });
+        if (Email !== undefined)
+            fields.push('Email = @Email'); params.push({ name: 'Email', value: Email });
+        if (Username !== undefined)
+            fields.push('Username = @Username'); params.push({ name: 'Username', value: Username });
         if (Password) {
             const hashedPassword = await bcrypt.hash(Password, parseInt(process.env.BCRYPT_SALT_ROUNDS || '10'));
-            fields.push('Password = @Password');
-            params.push({ name: 'Password', value: hashedPassword });
+            fields.push('Password = @Password'); params.push({ name: 'Password', value: hashedPassword });
         }
 
         if (!fields.length)
@@ -172,18 +160,10 @@ export const updateUserProfilePicture = async (req, res) => {
             ]
         );
 
-        res.status(200).json({
-            success: true,
-            message: "Profile picture URL saved successfully!",
-            url: pictureUrl,
-        });
+        res.status(200).json({ success: true, message: "Profile picture URL saved successfully!", url: pictureUrl });
     } catch (error) {
         console.error("Error updating profile picture:", error);
-        res.status(500).json({
-            success: false,
-            message: "Failed to update profile picture.",
-            error: error.message,
-        });
+        res.status(500).json({ success: false, message: "Failed to update profile picture.", error: error.message });
     }
 };
 
