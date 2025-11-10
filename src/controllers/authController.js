@@ -2,12 +2,17 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { executeQuery } from '../utils/executeQuery.js';
 
-const generateToken = (userId, username, secret, expiresIn) => jwt.sign({ id: userId, username }, secret, { expiresIn });
+const generateToken = (userId, username, secret, expiresIn) =>
+    jwt.sign({ id: userId, username }, secret, { expiresIn });
 
 const updateRefreshToken = async (userId, refreshToken) =>
     executeQuery(
         `UPDATE Users SET RefreshToken = @RefreshToken WHERE ID = @ID`,
-        [{ name: 'RefreshToken', value: refreshToken }, { name: 'ID', value: userId }]);
+        [
+            { name: 'RefreshToken', value: refreshToken },
+            { name: 'ID', value: userId }
+        ]
+    );
 
 // POST /auth
 export const authUser = async (req, res) => {
@@ -27,7 +32,17 @@ export const authUser = async (req, res) => {
         if (!user)
             return res.status(401).json({ success: false, message: "This user doesn't exist." });
 
-        const isPasswordValid = await bcrypt.compare(Password, user.Password);
+        const storedPassword = user.Password || '';
+
+        const isEncrypted = /^\$2[aby]\$/.test(storedPassword);
+
+        let isPasswordValid = false;
+
+        if (isEncrypted) {
+            isPasswordValid = await bcrypt.compare(Password, storedPassword);
+        } else {
+            isPasswordValid = Password === storedPassword;
+        }
 
         if (!isPasswordValid)
             return res.status(401).json({ success: false, message: 'Invalid username or password.' });
@@ -62,6 +77,7 @@ export const refreshToken = async (req, res) => {
 
     try {
         const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
+
         const result = await executeQuery(
             `
             SELECT ID, Username, Password
@@ -77,7 +93,8 @@ export const refreshToken = async (req, res) => {
         const user = result.recordset[0];
         if (!user)
             return res.status(401).json({ message: 'Invalid refresh token.' });
-        const accessToken = generateToken(user.Id, user.Username, process.env.JWT_SECRET, '1h');
+
+        const accessToken = generateToken(user.ID, user.Username, process.env.JWT_SECRET, '1h');
         res.status(200).json({ message: 'Token refreshed successfully', accessToken });
     } catch (error) {
         console.error('Error during refresh token processing:', error);
