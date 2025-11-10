@@ -1,14 +1,14 @@
 import Router from 'express';
 import {
-    getKeycards, getAccessLogs, getKeycardById, addKeycard, updateKeycard, deleteKeycard,
-    getKeycardOwners,
-    getKeycardsStatuses, getKeycardsStatusesByID, addKeycardStatus, updateKeycardStatus, deleteKeycardStatus,
-    updateSmartLockState
+    getKeycards, getKeycardById, addKeycard, updateKeycard, deleteKeycard,
+    getKeycardsStatuses, getAKeycardsAccessLogs, getKeycardsStatusesByID, addKeycardStatus, updateKeycardStatus, deleteKeycardStatus,
+    getKeycardOwners, getAccessLogs, updateSmartLockState
 } from '../controllers/keycardController.js';
 const router = Router();
 
 router.get('/', getKeycards);
 router.get('/logs', getAccessLogs);
+router.get('/logs/:id', getAKeycardsAccessLogs);
 router.get('/name/:id', getKeycardOwners);
 router.get('/status', getKeycardsStatuses);
 router.get('/status/:id', getKeycardsStatusesByID);

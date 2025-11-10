@@ -48,9 +48,7 @@ export const getKeycardOwners = async (req, res) => {
 
     try {
         const query = `
-            SELECT 
-                u.FirstName, 
-                u.LastName
+            SELECT u.FirstName, u.LastName 
             FROM Users u
             INNER JOIN Keycards k ON k.UserID = u.ID
             WHERE k.ID = @id
@@ -133,29 +131,18 @@ export const updateKeycard = async (req, res) => {
         const fields = [];
         const params = [{ name: 'ID', value: id }];
 
-        if (RfidTag) {
-            fields.push('RfidTag = @RfidTag');
-            params.push({ name: 'RfidTag', value: RfidTag.trim() });
-        }
-        if (RfidTag) {
-            fields.push('Name = @Name');
-            params.push({ name: 'Name', value: Name.trim() });
-        }
-        if (ExpirationDate) {
-            fields.push('ExpirationDate = @ExpirationDate');
-            params.push({ name: 'ExpirationDate', value: ExpirationDate });
-        }
-        if (UserID) {
-            fields.push('UserID = @UserID');
-            params.push({ name: 'UserID', value: UserID });
-        }
-        if (StatusTypeID) {
-            fields.push('StatusTypeID = @StatusTypeID');
-            params.push({ name: 'StatusTypeID', value: StatusTypeID });
-        }
-        if (fields.length === 0) {
+        if (RfidTag)
+            fields.push('RfidTag = @RfidTag'); params.push({ name: 'RfidTag', value: RfidTag.trim() });
+        if (RfidTag)
+            fields.push('Name = @Name'); params.push({ name: 'Name', value: Name.trim() });
+        if (ExpirationDate)
+            fields.push('ExpirationDate = @ExpirationDate'); params.push({ name: 'ExpirationDate', value: ExpirationDate });
+        if (UserID)
+            fields.push('UserID = @UserID'); params.push({ name: 'UserID', value: UserID });
+        if (StatusTypeID)
+            fields.push('StatusTypeID = @StatusTypeID'); params.push({ name: 'StatusTypeID', value: StatusTypeID });
+        if (fields.length === 0)
             return res.status(400).json({ success: false, message: 'No valid fields provided for update.' });
-        }
 
         const updateQuery = `UPDATE Keycards SET ${fields.join(', ')} WHERE ID = @ID;`;
         await executeQuery(updateQuery, params);
@@ -205,13 +192,36 @@ export const getAccessLogs = async (req, res) => {
     }
 };
 
+// GET /keycards/logs/:id
+export const getAKeycardsAccessLogs = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const query = `
+            SELECT a.* FROM AccessLog a
+            JOIN Keycards k ON a.RfidTag = k.RfidTag
+            WHERE k.ID = @id
+            ORDER BY a.AccessTime DESC
+        `;
+
+        const result = await executeQuery(query, [{ name: 'id', value: id }]);
+        if (result.recordset.length === 0)
+            return res.status(404).json({ success: false, message: 'No access logs found for this keycard' });
+        res.status(200).json({ success: true, data: result.recordset });
+    } catch (error) {
+        console.error('Connection error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: error.message || error 
+        });
+    }
+};
+
 // POST /keycards/logs
 export const addAccessLog = async (req, res) => {
     try {
         const { KeycardID, LocationID } = req.body;
-
         await createAccessLog({ KeycardID, LocationID });
-
         res.status(201).json({ success: true, message: 'Access log record added successfully!' });
     } catch (error) {
         console.error('Error adding access log:', error);
