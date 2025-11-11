@@ -23,6 +23,7 @@ const HOST = process.env.HOST || 'localhost';
 // CORS
 app.use(cors({ origin: '*', credentials: true }));
 
+app.use("/public", express.static(path.resolve("public")));
 app.use("/uploads", express.static(path.resolve("uploads")));
 app.use('/auth', authRoutes);
 app.use('/keycards', keycardRoutes);
