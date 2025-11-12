@@ -3,7 +3,7 @@ import { executeQuery } from '../utils/executeQuery.js';
 // GET /camera/device/
 export const getCameras = async (req, res) => {
     try {
-        const locationsQuery = `SELECT * FROM CameraSensor`;
+        const locationsQuery = `SELECT * FROM CameraSensors`;
         const result = await executeQuery(locationsQuery);
         res.status(200).json({ success: true, data: result.recordset });
     } catch (error) {
@@ -16,7 +16,7 @@ export const getCameras = async (req, res) => {
 export const getCameraByID = async (req, res) => {
     const { id } = req.params;
     try {
-        const locationQuery = `SELECT * FROM CameraSensor WHERE ID = @ID`;
+        const locationQuery = `SELECT * FROM CameraSensors WHERE ID = @ID`;
         const result = await executeQuery(locationQuery, [{ name: 'ID', value: id }]);
         if (result.recordset.length === 0)
             return res.status(404).json({ success: false, message: 'Camera device not found.' });
@@ -34,7 +34,7 @@ export const addCamera = async (req, res) => {
 
         await executeQuery(
             `
-            INSERT INTO CameraSensor (Active, DateAdded, LocationID, UserID)
+            INSERT INTO CameraSensors (Active, DateAdded, LocationID, UserID)
             VALUES (@Active, GETDATE(), @LocationID, @UserID);
             `,
             [
@@ -57,7 +57,7 @@ export const deleteCamera = async (req, res) => {
         const { id } = req.params;
 
         const existing = await executeQuery(
-            `SELECT ID FROM CameraSensor WHERE ID = @ID;`,
+            `SELECT ID FROM CameraSensors WHERE ID = @ID;`,
             [{ name: 'ID', value: id }]
         );
 
@@ -65,7 +65,7 @@ export const deleteCamera = async (req, res) => {
             return res.status(404).json({ message: 'Camera device not found.' });
 
         await executeQuery(
-            `DELETE FROM CameraSensor WHERE ID = @ID;`,
+            `DELETE FROM CameraSensors WHERE ID = @ID;`,
             [{ name: 'ID', value: id }]
         );
 
