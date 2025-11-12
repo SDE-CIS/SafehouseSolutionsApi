@@ -46,7 +46,7 @@ export const addCamera = async (req, res) => {
 
         res.status(201).json({ success: true, message: 'New camera device registered successfully!' });
     } catch (error) {
-        console.error('Error addint new camera device:', error);
+        console.error('Error adding new camera device:', error);
         res.status(500).json({ success: false, message: error.message || 'Failed to register the new camera device.' });
     }
 };
