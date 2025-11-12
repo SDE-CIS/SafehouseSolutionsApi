@@ -77,7 +77,7 @@ API’et fungerer som broker-klient og modtager beskeder fra forskellige enheder
 
 ## Handlere
 * rfidHandlers.js: verificerer UID fra RFID-enhed mod database.
-* temperatureHandlers.js: opdaterer temperatur og fugtighed i databasen.
+* temperatureHandlers.js: opdaterer temperatur i databasen.
 * fanHandler.js: styrer ventilatorstatus og sender MQTT-feedback.
 * cameraHandler.js: håndterer notifikationer fra kameraer ved bevægelse og upload.
 * MQTT-integration muliggør real-time synkronisering mellem enheder og dashboard, så brugeren kan se ændringer øjeblikkeligt uden at genindlæse websiden.
@@ -86,7 +86,7 @@ API’et fungerer som broker-klient og modtager beskeder fra forskellige enheder
 
 API’et anvender en MySQL-database med følgende centrale tabeller:
 * users – brugerkonti og adgangsdata
-* rfid_cards – registrerede adgangskort
+* rfid_cards – registrerede nøglekort
 * access_logs – historik over adgangsforsøg
 * temperatures – temperaturmålinger pr. lokation
 * videos – metadata for optagede videoer
