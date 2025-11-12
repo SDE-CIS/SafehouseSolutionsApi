@@ -260,7 +260,7 @@ export const addTemperatureSetting = async (req, res) => {
     try {
         const { UserID, Location, DeviceID, MaxTemperature, NormalTemperature, MinTemperature } = req.body;
 
-        if (!UserID || !Location || !DeviceID || MaxTemperature == null || NormalTemperature == null || MinTemperature == null) {
+        if (!UserID || !Location || !DeviceID || MaxTemperature === null || NormalTemperature === null || MinTemperature === null) {
             return res.status(400).json({
                 success: false,
                 message: 'Missing required fields: UserID, Location, DeviceID, MaxTemperature, NormalTemperature, or MinTemperature',
@@ -268,8 +268,21 @@ export const addTemperatureSetting = async (req, res) => {
         }
 
         const settings = { MaxTemperature, NormalTemperature, MinTemperature };
-        await publishTemperatureSettings(client, UserID, Location, DeviceID, settings);
-        res.status(200).json({ success: true });
+
+        await Promise.all([
+            publishTemperatureSettings(client, UserID, Location, DeviceID, settings),
+            executeQuery(`
+                INSERT INTO TemperatureSettings (MaxTemperature, NormalTemperature, MinTemperature, DeviceID)
+                VALUES (@MaxTemperature, @NormalTemperature, @MinTemperature, @DeviceID);
+                `, [
+                { name: 'MaxTemperature', value: MaxTemperature },
+                { name: 'NormalTemperature', value: NormalTemperature },
+                { name: 'MinTemperature', value: MinTemperature },
+                { name: 'DeviceID', value: DeviceID }
+            ])
+        ]);
+
+        res.status(200).json({ success: true, message: 'Temperature settings published successfully.' });
     } catch (error) {
         console.error('Error handling temperature settings:', error);
         res.status(500).json({
@@ -362,7 +375,7 @@ export const getFanData = async (req, res) => {
 // MQTT POST /temperature/fan
 export const postFanControl = async (req, res) => {
     try {
-        const { Location, DeviceID, FanMode, UserID } = req.body;
+        const { Location, DeviceID, FanMode, UserID, FanOn, FanSpeed } = req.body;
 
         if (!Location || !DeviceID || !FanMode || !UserID) {
             return res.status(400).json({
@@ -371,9 +384,28 @@ export const postFanControl = async (req, res) => {
             });
         }
 
+        if(FanMode.toLowerCase() !== "on" && FanMode.toLowerCase() !== "off" && FanMode.toLowerCase() !== "auto") {
+            return res.status(400).json({
+                success: false,
+                message: 'fanMode can only be one of the following values: on, off or auto.',
+            });
+        }
+
         const settings = { fanMode: FanMode.toLowerCase() };
-        console.log(settings);
-        await publishFanSettings(client, UserID, Location, DeviceID, settings);
+        await Promise.all([
+            publishFanSettings(client, UserID, Location, DeviceID, settings),
+            executeQuery(`
+                INSERT INTO FanData (ActivationTimestamp, DeviceID, FanOn, FanSpeed, FanMode )
+                VALUES (GETDATE(), @DeviceID, @FanOn, @FanSpeed, @FanMode);
+                `,
+                [
+                    { name: 'DeviceID', value: DeviceID },
+                    { name: 'FanOn', value: FanOn || null },
+                    { name: 'FanSpeed', value: FanSpeed || null },
+                    { name: 'FanMode', value: FanMode }
+                ])
+        ]);
+        
         res.status(200).json({ success: true });
     } catch (error) {
         console.error('Error handling fan control:', error);
@@ -384,9 +416,6 @@ export const postFanControl = async (req, res) => {
     }
 };
 
-// DELETE
-//...
-
 // ---- FAN SENSOR DEVICES ----------------------------------------------------------------------------------------------------
 
 // GET /temperature/fan/device/:userId
@@ -394,7 +423,7 @@ export const getUsersFans = async (req, res) => {
     const { userId } = req.params;
 
     try {
-        const fansQuery =`
+        const fansQuery = `
             SELECT fs.*, COALESCE(fd.fanMode, 'off') AS fanMode
             FROM FanSensors fs
             LEFT JOIN FanData fd 
@@ -470,6 +499,7 @@ export const updateFan = async (req, res) => {
                 `SELECT COUNT(*) AS UserExists FROM Users WHERE ID = @UserID`,
                 [{ name: 'UserID', value: UserID }]
             );
+
             if (!userResult.recordset[0].UserExists)
                 return res.status(400).json({ message: 'User not found.' });
         }
@@ -527,25 +557,11 @@ export const updateFan = async (req, res) => {
 export const deleteFan = async (req, res) => {
     try {
         const { id } = req.params;
-
-        const existing = await executeQuery(
-            `SELECT ID FROM FanSensors WHERE ID = @ID;`,
-            [{ name: 'ID', value: id }]
-        );
-
+        const existing = await executeQuery(`SELECT ID FROM FanSensors WHERE ID = @ID;`, [{ name: 'ID', value: id }]);
         if (existing.recordset.length === 0)
             return res.status(404).json({ message: "This fan device doesn't exist." });
-
-        await executeQuery(
-            `DELETE FROM FanData WHERE DeviceID = @DeviceID;`,
-            [{ name: 'DeviceID', value: id }]
-        );
-
-        await executeQuery(
-            `DELETE FROM FanSensors WHERE ID = @ID;`,
-            [{ name: 'ID', value: id }]
-        );
-
+        await executeQuery(`DELETE FROM FanData WHERE DeviceID = @DeviceID;`, [{ name: 'DeviceID', value: id }]);
+        await executeQuery(`DELETE FROM FanSensors WHERE ID = @ID;`, [{ name: 'ID', value: id }]);
         res.status(200).json({ message: 'Fan device and related data removed successfully!' });
     } catch (error) {
         console.error(error);
