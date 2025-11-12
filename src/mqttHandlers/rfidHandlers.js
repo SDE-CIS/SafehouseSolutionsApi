@@ -5,7 +5,8 @@ export async function handleRfidScan(topic, message, client) {
     try {
         const topicParts = topic.split('/');
         const userIdFromTopic = topicParts[0];
-        const locationNameFromTopic = topicParts[2];
+        const locationFromTopic = topicParts[2];
+        const deviceId = topicParts[3];
 
         const msgStr = message.toString();
         let payload;
@@ -38,19 +39,12 @@ export async function handleRfidScan(topic, message, client) {
             keycardId = result.recordset[0].ID;
         }
 
-        const responseTopic = `${userIdFromTopic}/rfid/frontdoor/1/scan/${rfidTag}`;
+        const responseTopic = `${userIdFromTopic}/rfid/${locationFromTopic}/${deviceId}/scan/${rfidTag}`;
         const responsePayload = JSON.stringify({ authorised });
         client.publish(responseTopic, responsePayload, { qos: 1 }, (err) => {
             if (err) console.error('Failed to publish response:', err);
             else console.log(`Published authorization to ${responseTopic}: ${responsePayload}`);
         });
-
-        const locationQuery = 'SELECT ID FROM Locations WHERE LocationName = @name';
-        const locationResult = await executeQuery(locationQuery, [{ name: 'name', value: locationNameFromTopic }]);
-        if (locationResult.recordset.length === 0) {
-            console.error(`Location not found for name: ${locationNameFromTopic}`);
-            return;
-        }
 
         const locationId = locationResult.recordset[0].ID;
         await createAccessLog({ RfidTag: rfidTag, LocationID: locationId, Granted: authorised });
@@ -65,25 +59,63 @@ export async function handleAssignRfid(topic, message, client) {
         const msgStr = message.toString();
         let payload;
 
+        // Try parsing the incoming MQTT message
         try {
-            payload = JSON.parse(msgStr)
+            payload = JSON.parse(msgStr);
         } catch (jsonErr) {
             console.error(`Failed to parse MQTT message as JSON: ${msgStr}`);
             return;
         }
 
-        if (payload.status === "unassigned") {
-            const responseTopic = `rfid/assign`;
-            const responsePayload = JSON.stringify({ userId: 1 });
+        const { DeviceID, status } = payload;
 
-            client.publish(responseTopic, responsePayload, { qos: 1 }, (err) => {
-                if (err) console.error('Failed to publish response:', err);
-                else console.log(`Published authorization to ${responseTopic}: ${responsePayload}`);
-            });
+        if (!DeviceID) {
+            console.error("Missing DeviceID in payload");
+            return;
         }
+
+        // Only insert if the status is "unassigned"
+        if (status === "unassigned") {
+            const query = `
+                IF NOT EXISTS (SELECT 1 FROM RFIDSensors WHERE ID = @ID)
+                BEGIN
+                    INSERT INTO RFIDSensors (ID, Active, Location, UserID)
+                    VALUES (@ID, @Active, @Location, @UserID)
+                END
+            `;
+
+            await executeQuery(query, [
+                { name: "ID", value: DeviceID },
+                { name: "Active", value: false },
+                { name: "Location", value: null },
+                { name: "UserID", value: null }
+            ]);
+
+            console.log(`RFID sensor '${DeviceID}' inserted as unassigned.`);
+        } else {
+            console.log(`ℹSkipping insert: status is '${status}'`);
+        }
+
     } catch (err) {
-        console.error('Unexpected error in handleAssignRfid:', err);
+        console.error("Unexpected error in handleAssignRfid:", err);
     }
+}
+
+export async function publishAssignRfid(location, userId, deviceId, client) {
+    const topic = `rfid/assign/${deviceId}`;
+    const payload = JSON.stringify({
+        userId: userId,
+        location: location,
+    });
+
+    // --- Publish to MQTT ---
+    client.publish(topic, payload, { qos: 1 }, (err) => {
+        if (err) {
+            console.error('Failed to publish MQTT message:', err);
+        } else {
+            console.log(`MQTT: Published assignment to ${topic}`);
+        }
+    });
 }
 
 export async function publishRfidLockState(client, userId, location, deviceId, isLocked) {
