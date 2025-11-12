@@ -1,6 +1,6 @@
 import { executeQuery } from '../utils/executeQuery.js';
 
-// GET 
+// GET /camera/device/
 export const getCameras = async (req, res) => {
     try {
         const locationsQuery = `SELECT * FROM CameraSensor`;
