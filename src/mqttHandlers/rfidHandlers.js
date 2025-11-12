@@ -6,7 +6,6 @@ export async function handleRfidScan(topic, message, client) {
         const topicParts = topic.split('/');
         const userIdFromTopic = topicParts[0];
         const locationNameFromTopic = topicParts[2];
-
         const msgStr = message.toString();
         let payload;
 
@@ -27,7 +26,6 @@ export async function handleRfidScan(topic, message, client) {
 
         const query = 'SELECT TOP 1 UserID, ID FROM Keycards WHERE RfidTag = @tag';
         const result = await executeQuery(query, [{ name: 'tag', value: rfidTag.toString() }]);
-
         let authorised = false;
         let actualUserId = 'unknown';
         let keycardId = null;

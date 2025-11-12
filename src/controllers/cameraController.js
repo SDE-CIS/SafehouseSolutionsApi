@@ -1,30 +1,5 @@
 import { executeQuery } from '../utils/executeQuery.js';
 
-
-// ---- CAMERA IMAGE DATA ----------------------------------------------------------------------------------------------------
-
-// GET /camera
-export const getCameraData = async (req, res) => {
-
-};
-
-// GET /camera/:id
-export const getCameraDataByID = async (req, res) => {
-
-};
-
-// POST /camera
-export const addCameraData = async (req, res) => {
-
-};
-
-// DELETE /camera/:id
-export const deleteCameraData = async (req, res) => {
-
-};
-
-// ---- CAMERA DEVICES ----------------------------------------------------------------------------------------------------
-
 // GET 
 export const getCameras = async (req, res) => {
     try {
@@ -74,11 +49,6 @@ export const addCamera = async (req, res) => {
         console.error('Error addint new camera device:', error);
         res.status(500).json({ success: false, message: error.message || 'Failed to register the new camera device.' });
     }
-};
-
-// PUT /camera/device/:id
-export const updateCamera = async (req, res) => {
-
 };
 
 // DELETE /camera/device/:id
