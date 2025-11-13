@@ -1,5 +1,7 @@
 import { executeQuery } from '../utils/executeQuery.js';
 import { createAccessLog } from '../utils/createAccessLog.js';
+import { publishAssignRfid, publishRfidLockState } from '../mqttHandlers/rfidHandlers.js';
+import client from '../config/mqtt.js';
 
 // ---- KEYCARDS ----------------------------------------------------------------------------------------------------
 
@@ -368,3 +370,56 @@ export const updateSmartLockState = async (req, res) => {
         });
     }
 }
+
+export const updateRfidDevice = async (req, res) => {
+    try {
+        const { UserID, Location, DeviceID, Active } = req.body;
+
+        // Basic input validation
+        if (!UserID || !Location || !DeviceID || Active === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields: UserID, Location, DeviceID, or Active',
+            });
+        }
+
+        // SQL Server UPDATE query
+        const query = `
+            UPDATE RFIDSensors
+            SET 
+                UserID = @UserID,
+                Location = @Location,
+                Active = @Active
+            WHERE ID = @DeviceID
+        `;
+
+        const result = await executeQuery(query, [
+            { name: 'UserID', value: UserID },
+            { name: 'Location', value: Location },
+            { name: 'Active', value: Active },
+            { name: 'DeviceID', value: DeviceID }
+        ]);
+
+        // If nothing was updated, the device may not exist
+        if (result.rowsAffected && result.rowsAffected[0] === 0) {
+            return res.status(404).json({
+                success: false,
+                message: `No RFID device found with ID: ${DeviceID}`,
+            });
+        }
+
+        publishAssignRfid(Location, UserID, DeviceID, client);
+
+        return res.status(200).json({
+            success: true,
+            message: `RFID device ${DeviceID} successfully assigned to user ${UserID}`,
+        });
+
+    } catch (error) {
+        console.error('Error assigning RFID device:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Error assigning RFID device',
+        });
+    }
+};

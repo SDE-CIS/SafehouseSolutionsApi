@@ -2,7 +2,8 @@ import Router from 'express';
 import {
     getKeycards, getKeycardById, addKeycard, updateKeycard, deleteKeycard,
     getKeycardsStatuses, getAKeycardsAccessLogs, getKeycardsStatusesByID, addKeycardStatus, updateKeycardStatus, deleteKeycardStatus,
-    getKeycardOwners, getAccessLogs, updateSmartLockState
+    getKeycardOwners, getAccessLogs, updateSmartLockState,
+    updateRfidDevice
 } from '../controllers/keycardController.js';
 const router = Router();
 
@@ -20,6 +21,7 @@ router.post('/rfid', updateSmartLockState);
 
 router.put('/:id', updateKeycard);
 router.put('/status/:id', updateKeycardStatus);
+router.put('/rfid/assign', updateRfidDevice);
 
 router.delete('/:id', deleteKeycard);
 router.delete('/status/:id', deleteKeycardStatus);
