@@ -62,37 +62,36 @@ export const streamVideo = async (req, res) => {
         const { name } = req.params;
         const range = req.headers.range;
 
-        if (!range) {
-            return res.status(400).send("Requires Range header");
-        }
-
         const blobClient = containerClient.getBlobClient(name);
         const exists = await blobClient.exists();
         if (!exists) return res.status(404).send("Video not found");
 
         const blobProps = await blobClient.getProperties();
         const fileSize = blobProps.contentLength;
-        let contentType = blobProps.contentType || "video/mp4";
+        let contentType = blobProps.contentType;
 
-        const CHUNK_SIZE = 2 * 10 ** 6;
+        if (!contentType || contentType === "application/octet-stream") {
+            if (name.toLowerCase().endsWith(".mp4")) contentType = "video/mp4";
+            else if (name.toLowerCase().endsWith(".avi")) contentType = "video/x-msvideo";
+            else contentType = "application/octet-stream";
+        }
+
+        if (!range) {
+            const download = await blobClient.download();
+            res.writeHead(200, {
+                "Content-Length": fileSize,
+                "Content-Type": contentType,
+            });
+            download.readableStreamBody.pipe(res);
+            return;
+        }
+
+        const CHUNK_SIZE = 10 ** 6;
         const start = Number(range.replace(/\D/g, ""));
         const end = Math.min(start + CHUNK_SIZE, fileSize - 1);
-
         const contentLength = end - start + 1;
 
         const downloadResponse = await blobClient.download(start, contentLength);
-
-        if (!contentType || contentType === "application/octet-stream") {
-            if (name.toLowerCase().endsWith(".mp4")) {
-                contentType = "video/mp4";
-            } else if (name.toLowerCase().endsWith(".avi")) {
-                contentType = "video/x-msvideo";
-            } else if (name.toLowerCase().endsWith(".mov")) {
-                contentType = "video/quicktime";
-            } else {
-                contentType = "application/octet-stream";
-            }
-        }
 
         res.writeHead(206, {
             "Content-Range": `bytes ${start}-${end}/${fileSize}`,
