@@ -42,7 +42,7 @@ export async function generateVideoThumbnail(videoName) {
         await pipeline(response.body, fs.createWriteStream(tempFile));
 
         const stats = fs.statSync(tempFile);
-        if (!stats.size || stats.size < 100 * 1024) {
+        if (!stats.size || stats.size < 10 * 1024) {
             console.warn(`Skipping ${videoName}: too small (${stats.size} bytes)`);
             fs.unlinkSync(tempFile);
             return placeholderPath;
