@@ -52,10 +52,13 @@ export async function generateVideoThumbnail(videoName) {
         const download = await blobClient.download(0, 10 * 1024 * 1024);
 
         await new Promise((resolve, reject) => {
-            ffmpeg(download.readableStreamBody)
+            ffmpeg(tempFile)
                 .on("start", () => console.log(`FFmpeg started for ${videoName}`))
                 .on("error", reject)
-                .on("end", resolve)
+                .on("end", () => {
+                    fs.unlink(tempFile, () => { }); // ryd op efter thumbnail
+                    resolve();
+                })
                 .screenshots({
                     timestamps: ["00:00:00.5"],
                     filename: path.basename(thumbnailPath),
