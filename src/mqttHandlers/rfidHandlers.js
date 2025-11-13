@@ -28,7 +28,6 @@ export async function handleRfidScan(topic, message, client) {
 
         const query = 'SELECT TOP 1 UserID, ID FROM Keycards WHERE RfidTag = @tag';
         const result = await executeQuery(query, [{ name: 'tag', value: rfidTag.toString() }]);
-
         let authorised = false;
         let actualUserId = 'unknown';
         let keycardId = null;

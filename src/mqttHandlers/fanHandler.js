@@ -8,7 +8,6 @@ export async function handleFanStateInput(topic, message, client) {
         const deviceId = parseInt(topicParts[3]);
         const msgStr = message.toString();
         let payload;
-
         console.log(`Message recieved on topic: ${topic}`);
 
         try {
@@ -19,25 +18,22 @@ export async function handleFanStateInput(topic, message, client) {
         }
 
         const { fanOn, fanSpeed: inputFanSpeed, fanMode } = payload;
-
         if (!fanOn && !inputFanSpeed && !fanMode) {
             console.error(`Fan data not found in message: ${msgStr}`);
             return;
         }
-
         console.log(`Fan State data received: ${fanOn} from device: ${deviceId} (topic: ${topic})`);
 
         const validFanModes = ['on', 'off', 'auto'];
         const FanMode = fanMode?.toLowerCase();
-
         if (!validFanModes.includes(FanMode)) {
             console.error(`Invalid FanMode value "${fanMode}". Must be one of: ${validFanModes.join(', ')}`);
             return;
         }
 
+        // Dynamisk vifte indstillinger kontrollering
         let FanOn;
         let FanSpeed = inputFanSpeed || 0;
-
         switch (FanMode) {
             case 'off':
                 FanOn = 0;
@@ -55,7 +51,6 @@ export async function handleFanStateInput(topic, message, client) {
             INSERT INTO FanData (ActivationTimestamp, FanOn, FanSpeed, FanMode, DeviceID)
             VALUES (GETDATE(), @FanOn, @FanSpeed, @FanMode, @DeviceID);
         `;
-
         await executeQuery(query, [
             { name: 'FanOn', value: FanOn },
             { name: 'FanSpeed', value: FanSpeed },
