@@ -82,6 +82,18 @@ export const streamVideo = async (req, res) => {
 
         const downloadResponse = await blobClient.download(start, contentLength);
 
+        if (!contentType || contentType === "application/octet-stream") {
+            if (name.toLowerCase().endsWith(".mp4")) {
+                contentType = "video/mp4";
+            } else if (name.toLowerCase().endsWith(".avi")) {
+                contentType = "video/x-msvideo";
+            } else if (name.toLowerCase().endsWith(".mov")) {
+                contentType = "video/quicktime";
+            } else {
+                contentType = "application/octet-stream";
+            }
+        }
+
         res.writeHead(206, {
             "Content-Range": `bytes ${start}-${end}/${fileSize}`,
             "Accept-Ranges": "bytes",
