@@ -385,10 +385,10 @@ export const updateRfidDevice = async (req, res) => {
 
         // SQL Server UPDATE query
         const query = `
-            UPDATE RFIDSensors
+            UPDATE RFIDScanners
             SET 
                 UserID = @UserID,
-                Location = @Location,
+                LocationID = @Location,
                 Active = @Active
             WHERE ID = @DeviceID
         `;
