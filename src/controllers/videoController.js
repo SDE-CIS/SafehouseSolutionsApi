@@ -60,15 +60,36 @@ export const getThumbnail = async (req, res) => {
 export const streamVideo = async (req, res) => {
     try {
         const { name } = req.params;
+        const range = req.headers.range;
+
+        if (!range) {
+            return res.status(400).send("Requires Range header");
+        }
+
         const blobClient = containerClient.getBlobClient(name);
         const exists = await blobClient.exists();
         if (!exists) return res.status(404).send("Video not found");
+
         const blobProps = await blobClient.getProperties();
+        const fileSize = blobProps.contentLength;
         const contentType = blobProps.contentType || "video/mp4";
-        const download = await blobClient.download();
-        res.setHeader("Content-Type", contentType);
-        res.setHeader("Accept-Ranges", "bytes");
-        download.readableStreamBody.pipe(res);
+
+        const CHUNK_SIZE = 2 * 10 ** 6;
+        const start = Number(range.replace(/\D/g, ""));
+        const end = Math.min(start + CHUNK_SIZE, fileSize - 1);
+
+        const contentLength = end - start + 1;
+
+        const downloadResponse = await blobClient.download(start, contentLength);
+
+        res.writeHead(206, {
+            "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+            "Accept-Ranges": "bytes",
+            "Content-Length": contentLength,
+            "Content-Type": contentType,
+        });
+
+        downloadResponse.readableStreamBody.pipe(res);
     } catch (error) {
         console.error("Stream error:", error.message);
         res.status(500).send(error.message);
