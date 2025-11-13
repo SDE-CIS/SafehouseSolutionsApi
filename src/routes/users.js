@@ -1,7 +1,10 @@
 import Router from 'express';
 import { getUsers, getUsersByID, addUser, updateUser, deleteUser, updateUserProfilePicture } from '../controllers/usersController.js';
 import { upload } from '../middleware/uploadMiddleware.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
+
 const router = Router();
+router.use(authMiddleware);
 
 router.get('/', getUsers);
 router.get('/:id', getUsersByID);
