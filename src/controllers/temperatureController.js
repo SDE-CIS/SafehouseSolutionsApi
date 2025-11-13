@@ -423,30 +423,14 @@ export const getUsersFans = async (req, res) => {
     const { userId } = req.params;
 
     try {
-        const fansQuery = `
-            SELECT fs.*, COALESCE(fd.fanMode, 'off') AS fanMode
-            FROM FanSensors fs
-            LEFT JOIN FanData fd 
-            ON fd.ID = (
-                SELECT TOP 1 ID
-                FROM FanData
-                WHERE DeviceID = fs.ID
-                ORDER BY ActivationTimestamp DESC
-            )
-            WHERE fs.UserID = @UserID;
-        `;
-
-        const result = await executeQuery(fansQuery, [
-            { name: 'UserID', value: userId }
-        ]);
-
+        const fansQuery = `SELECT * FROM vw_FanSensorsWithLatestData WHERE UserID = @UserID`;
+        const result = await executeQuery(fansQuery, [{ name: 'UserID', value: userId }]);
         if (result.recordset.length === 0) {
             return res.status(404).json({
                 success: false,
                 message: 'No fan sensors found for this user'
             });
         }
-
         res.status(200).json({ success: true, data: result.recordset });
     } catch (error) {
         console.error('Connection error:', error);
