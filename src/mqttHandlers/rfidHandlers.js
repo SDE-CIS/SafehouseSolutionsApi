@@ -18,16 +18,16 @@ export async function handleRfidScan(topic, message, client) {
             return;
         }
 
-        const rfidTag = payload?.cardUID;
-        if (!rfidTag) {
-            console.error(`cardUID not found in message: ${msgStr}`);
+        const { cardUID, status } = payload;
+        if (cardUID == undefined, status == undefined) {
+            console.error(`cardUID or status not found in message: ${msgStr}`);
             return;
         }
 
-        console.log(`RFID tag received: ${rfidTag} from userId: ${userIdFromTopic}`);
+        console.log(`RFID tag received: ${cardUID} from userId: ${userIdFromTopic}`);
 
         const query = 'SELECT TOP 1 UserID, ID FROM Keycards WHERE RfidTag = @tag';
-        const result = await executeQuery(query, [{ name: 'tag', value: rfidTag.toString() }]);
+        const result = await executeQuery(query, [{ name: 'tag', value: cardUID.toString() }]);
 
         let authorised = false;
         let actualUserId = 'unknown';
@@ -39,16 +39,18 @@ export async function handleRfidScan(topic, message, client) {
             keycardId = result.recordset[0].ID;
         }
 
-        const responseTopic = `${userIdFromTopic}/rfid/${locationFromTopic}/${deviceId}/scan/${rfidTag}`;
+        const responseTopic = `${userIdFromTopic}/rfid/${locationFromTopic}/${deviceId}/scan/${cardUID}`;
         const responsePayload = JSON.stringify({ authorised });
         client.publish(responseTopic, responsePayload, { qos: 1 }, (err) => {
             if (err) console.error('Failed to publish response:', err);
             else console.log(`Published authorization to ${responseTopic}: ${responsePayload}`);
         });
 
-        const locationId = locationResult.recordset[0].ID;
-        await createAccessLog({ RfidTag: rfidTag, LocationID: locationId, Granted: authorised });
-        console.log(`Access log added for RfidTag ${rfidTag} at LocationID ${locationId}, Granted: ${authorised}`);
+        await createAccessLog({ RfidTag: cardUID, LocationID: locationFromTopic, Granted: authorised });
+        console.log(`Access log added for RfidTag ${cardUID} at LocationID ${locationFromTopic}, Granted: ${authorised}`);
+
+        await updateSmartLockState(cardUID, status);
+
     } catch (err) {
         console.error('Unexpected error in handleRfidScan:', err);
     }
@@ -77,9 +79,9 @@ export async function handleAssignRfid(topic, message, client) {
         // Only insert if the status is "unassigned"
         if (status === "unassigned") {
             const query = `
-                IF NOT EXISTS (SELECT 1 FROM RFIDSensors WHERE ID = @ID)
+                IF NOT EXISTS (SELECT 1 FROM RFIDScanners WHERE ID = @ID)
                 BEGIN
-                    INSERT INTO RFIDSensors (ID, Active, DateAdded, LocationID, UserID, Locked)
+                    INSERT INTO RFIDScanners (ID, Active, DateAdded, LocationID, UserID, Locked)
                     VALUES (@ID, @Active, GETDATE(), @Location, @UserID, @Locked)
                 END
             `;
@@ -132,7 +134,22 @@ export async function publishRfidLockState(client, userId, location, deviceId, i
                 console.log(`Rfid lock settings published successfully to ${topic}`);
             }
         });
+        await updateSmartLockState(deviceId, isLocked);
     } catch (err) {
         console.error('Unexpected error in publishRfidLockState:', err);
     }
+}
+
+
+
+async function updateSmartLockState(deviceID, status) {
+    const updateQuery = `
+        UPDATE RFIDScanners
+        SET Locked = @Locked
+        WHERE ID = @DeviceID
+    `;
+    await executeQuery(updateQuery, [
+        { name: "Locked", value: status },
+        { name: "DeviceID", value: deviceID }]);
+    console.log(`Locked state changed for device ${deviceID} To: ${status}`);
 }

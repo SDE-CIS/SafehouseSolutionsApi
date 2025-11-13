@@ -212,9 +212,9 @@ export const getAKeycardsAccessLogs = async (req, res) => {
         res.status(200).json({ success: true, data: result.recordset });
     } catch (error) {
         console.error('Connection error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: error.message || error 
+        res.status(500).json({
+            success: false,
+            message: error.message || error
         });
     }
 };
@@ -403,10 +403,10 @@ export const updateRfidDevice = async (req, res) => {
 
         // SQL Server UPDATE query
         const query = `
-            UPDATE RFIDSensors
+            UPDATE RFIDScanners
             SET 
                 UserID = @UserID,
-                Location = @Location,
+                LocationID = @Location,
                 Active = @Active
             WHERE ID = @DeviceID
         `;
