@@ -6,12 +6,7 @@ import { createAccessLog } from '../utils/createAccessLog.js';
 // GET /keycards
 export const getKeycards = async (req, res) => {
     try {
-        const keycardsQuery = `
-            SELECT k.*, st.StatusName, st.StatusDescription
-            FROM Keycards k
-            LEFT JOIN StatusTypes st ON k.StatusTypeID = st.ID
-        `;
-
+        const keycardsQuery = `SELECT * FROM vw_KeycardsWithStatus`;
         const result = await executeQuery(keycardsQuery);
         res.status(200).json({ success: true, data: result.recordset });
     } catch (error) {
@@ -25,13 +20,7 @@ export const getKeycardById = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const keycardQuery = `
-            SELECT k.*, st.StatusName, st.StatusDescription
-            FROM Keycards k
-            LEFT JOIN StatusTypes st ON k.StatusTypeID = st.ID
-            WHERE k.ID = @ID
-        `;
-
+        const keycardQuery = `SELECT * FROM vw_KeycardsWithStatus WHERE ID = @ID`;
         const result = await executeQuery(keycardQuery, [{ name: 'ID', value: id }]);
         if (result.recordset.length === 0)
             return res.status(404).json({ success: false, message: 'Keycard not found' });
@@ -47,13 +36,7 @@ export const getKeycardOwners = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const query = `
-            SELECT u.FirstName, u.LastName 
-            FROM Users u
-            INNER JOIN Keycards k ON k.UserID = u.ID
-            WHERE k.ID = @id
-        `;
-
+        const query = `SELECT * FROM vw_UserKeycards WHERE KeycardID = @id`;
         const result = await executeQuery(query, [{ name: 'id', type: 'Int', value: id }]);
         if (result.recordset.length === 0)
             return res.status(404).json({ success: false, message: 'No owners found for this keycard' });
@@ -131,16 +114,21 @@ export const updateKeycard = async (req, res) => {
         const fields = [];
         const params = [{ name: 'ID', value: id }];
 
-        if (RfidTag)
+        if (RfidTag) {
             fields.push('RfidTag = @RfidTag'); params.push({ name: 'RfidTag', value: RfidTag.trim() });
-        if (RfidTag)
+        }
+        if (Name) {
             fields.push('Name = @Name'); params.push({ name: 'Name', value: Name.trim() });
-        if (ExpirationDate)
+        }
+        if (ExpirationDate) {
             fields.push('ExpirationDate = @ExpirationDate'); params.push({ name: 'ExpirationDate', value: ExpirationDate });
-        if (UserID)
+        }
+        if (UserID) {
             fields.push('UserID = @UserID'); params.push({ name: 'UserID', value: UserID });
-        if (StatusTypeID)
+        }
+        if (StatusTypeID) {
             fields.push('StatusTypeID = @StatusTypeID'); params.push({ name: 'StatusTypeID', value: StatusTypeID });
+        }
         if (fields.length === 0)
             return res.status(400).json({ success: false, message: 'No valid fields provided for update.' });
 
@@ -192,27 +180,21 @@ export const getAccessLogs = async (req, res) => {
     }
 };
 
-// GET /keycards/logs/:id
+// GET /keycards/logs/:rfid
 export const getAKeycardsAccessLogs = async (req, res) => {
-    const { id } = req.params;
+    const { rfid } = req.params;
 
     try {
-        const query = `
-            SELECT a.* FROM AccessLog a
-            JOIN Keycards k ON a.RfidTag = k.RfidTag
-            WHERE k.ID = @id
-            ORDER BY a.AccessTime DESC
-        `;
-
-        const result = await executeQuery(query, [{ name: 'id', value: id }]);
+        const query = `SELECT * FROM vw_AccessLogWithKeycard WHERE RfidTag = @rfid ORDER BY AccessTime DESC;`;
+        const result = await executeQuery(query, [{ name: 'rfid', value: rfid }]);
         if (result.recordset.length === 0)
             return res.status(404).json({ success: false, message: 'No access logs found for this keycard' });
         res.status(200).json({ success: true, data: result.recordset });
     } catch (error) {
         console.error('Connection error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: error.message || error 
+        res.status(500).json({
+            success: false,
+            message: error.message || error
         });
     }
 };
