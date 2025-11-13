@@ -48,9 +48,6 @@ export async function generateVideoThumbnail(videoName) {
             return placeholderPath;
         }
 
-        const blobClient = containerClient.getBlobClient(videoName);
-        const download = await blobClient.download(0, 10 * 1024 * 1024);
-
         await new Promise((resolve, reject) => {
             ffmpeg(tempFile)
                 .on("start", () => console.log(`FFmpeg started for ${videoName}`))
