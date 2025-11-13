@@ -2,11 +2,10 @@ import { executeQuery } from '../utils/executeQuery.js';
 
 export async function createAccessLog({ RfidTag, LocationID, Granted }) {
     try {
-        await executeQuery(
-            `
-      INSERT INTO AccessLog (AccessTime, RfidTag, LocationID, Granted)
-      VALUES (GETDATE(), @RfidTag, @LocationID, @Granted);
-      `,
+        await executeQuery(`
+            INSERT INTO AccessLog (AccessTime, RfidTag, LocationID, Granted)
+            VALUES (GETDATE(), @RfidTag, @LocationID, @Granted);
+            `,
             [
                 { name: 'RfidTag', value: RfidTag },
                 { name: 'LocationID', value: LocationID },
