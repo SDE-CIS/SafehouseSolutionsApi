@@ -79,8 +79,8 @@ export async function handleAssignRfid(topic, message, client) {
             const query = `
                 IF NOT EXISTS (SELECT 1 FROM RFIDSensors WHERE ID = @ID)
                 BEGIN
-                    INSERT INTO RFIDSensors (ID, Active, Location, UserID)
-                    VALUES (@ID, @Active, @Location, @UserID)
+                    INSERT INTO RFIDSensors (ID, Active, DateAdded, LocationID, UserID, Locked)
+                    VALUES (@ID, @Active, GETDATE(), @Location, @UserID, @Locked)
                 END
             `;
 
@@ -88,7 +88,8 @@ export async function handleAssignRfid(topic, message, client) {
                 { name: "ID", value: DeviceID },
                 { name: "Active", value: false },
                 { name: "Location", value: null },
-                { name: "UserID", value: null }
+                { name: "UserID", value: null },
+                { name: "Locked", value: false }
             ]);
 
             console.log(`RFID sensor '${DeviceID}' inserted as unassigned.`);
