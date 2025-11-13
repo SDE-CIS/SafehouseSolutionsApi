@@ -60,7 +60,7 @@ export const getCameraDataByID = async (req, res) => {
     }
 };
 
-// GET /camera/device
+// GET 
 export const getCameras = async (req, res) => {
     try {
         const locationsQuery = `SELECT * FROM CameraSensors`;
