@@ -72,7 +72,7 @@ export const streamVideo = async (req, res) => {
 
         const blobProps = await blobClient.getProperties();
         const fileSize = blobProps.contentLength;
-        const contentType = blobProps.contentType || "video/mp4";
+        let contentType = blobProps.contentType || "video/mp4";
 
         const CHUNK_SIZE = 2 * 10 ** 6;
         const start = Number(range.replace(/\D/g, ""));
