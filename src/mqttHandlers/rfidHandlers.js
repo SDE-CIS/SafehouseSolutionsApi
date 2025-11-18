@@ -76,9 +76,9 @@ export async function handleAssignRfid(topic, message, client) {
         // Only insert if the status is "unassigned"
         if (status === "unassigned") {
             const query = `
-                IF NOT EXISTS (SELECT 1 FROM RFIDSensors WHERE ID = @ID)
+                IF NOT EXISTS (SELECT 1 FROM RFIDScanners WHERE ID = @ID)
                 BEGIN
-                    INSERT INTO RFIDSensors (ID, Active, DateAdded, LocationID, UserID, Locked)
+                    INSERT INTO RFIDScanners (ID, Active, DateAdded, LocationID, UserID, Locked)
                     VALUES (@ID, @Active, GETDATE(), @Location, @UserID, @Locked)
                 END
             `;
