@@ -69,35 +69,34 @@ export async function handleAssignRfid(topic, message, client) {
             return;
         }
 
-        const { DeviceID, status } = payload;
+        const { DeviceID } = payload;
 
         if (!DeviceID) {
             console.error("Missing DeviceID in payload");
             return;
         }
 
-        // Only insert if the status is "unassigned"
-        if (status === "unassigned") {
-            const query = `
-                IF NOT EXISTS (SELECT 1 FROM RFIDScanners WHERE ID = @ID)
-                BEGIN
-                    INSERT INTO RFIDScanners (ID, Active, DateAdded, LocationID, UserID, Locked)
-                    VALUES (@ID, @Active, GETDATE(), @Location, @UserID, @Locked)
-                END
-            `;
+        const query = `
+            IF NOT EXISTS (SELECT 1 FROM RFIDScanners WHERE ID = @ID)
+            BEGIN
+                INSERT INTO RFIDScanners (ID, Active, DateAdded, LocationID, UserID, Locked)
+                VALUES (@ID, @Active, GETDATE(), @Location, @UserID, @Locked)
+            END
+        `;
 
-            await executeQuery(query, [
-                { name: "ID", value: DeviceID },
-                { name: "Active", value: false },
-                { name: "Location", value: null },
-                { name: "UserID", value: null },
-                { name: "Locked", value: false }
-            ]);
-
+        const result = await executeQuery(query, [
+            { name: "ID", value: DeviceID },
+            { name: "Active", value: false },
+            { name: "Location", value: null },
+            { name: "UserID", value: null },
+            { name: "Locked", value: false }
+        ]);
+        if (result.rowsAffected >= 1) {
             console.log(`RFID sensor '${DeviceID}' inserted as unassigned.`);
         } else {
-            console.log(`ℹSkipping insert: status is '${status}'`);
+            console.log(`RFID sensor '${DeviceID}' already inserted.`);
         }
+
 
     } catch (err) {
         console.error("Unexpected error in handleAssignRfid:", err);
