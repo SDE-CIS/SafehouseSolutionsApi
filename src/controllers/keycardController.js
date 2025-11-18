@@ -258,10 +258,10 @@ export const addKeycardStatus = async (req, res) => {
             return res.status(409).json({ message: 'This keycard status already exists.' });
 
         await executeQuery(
-            `INSERT INTO StatusTypes (StatusName, StatusDescription) VALUES (@StatusName, StatusDescription);`,
+            `INSERT INTO StatusTypes (StatusName, StatusDescription) VALUES (@StatusName, @StatusDescription);`,
             [
-                { name: 'StatusName', value: StatusName.trim() },
-                { name: 'StatusDescription', value: StatusDescription.trim() }
+                { name: 'StatusName', value: StatusName },
+                { name: 'StatusDescription', value: StatusDescription }
             ]
         );
 
