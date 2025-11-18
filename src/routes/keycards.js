@@ -6,7 +6,10 @@ import {
     updateRfidDevice,
     getRfidDevicesByUser
 } from '../controllers/keycardController.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
+
 const router = Router();
+router.use(authMiddleware);
 
 router.get('/', getKeycards);
 router.get('/logs', getAccessLogs);

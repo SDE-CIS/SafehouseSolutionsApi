@@ -6,7 +6,10 @@ import {
     getUsersFans, addFanDevice, updateFan, deleteFan,
     getFanData, postFanControl
 } from '../controllers/temperatureController.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
+
 const router = Router();
+router.use(authMiddleware);
 
 router.get('/', getTemperatureData);
 router.get('/latest', getLatestTemperature);

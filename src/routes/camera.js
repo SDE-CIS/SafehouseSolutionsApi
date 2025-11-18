@@ -1,6 +1,9 @@
 import Router from 'express';
 import { getCameraDataByID, getCameras, getCameraByID, addCamera, deleteCamera } from '../controllers/cameraController.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
+
 const router = Router();
+router.use(authMiddleware);
 
 router.get('/:id', getCameraDataByID);
 router.get('/device', getCameras);
