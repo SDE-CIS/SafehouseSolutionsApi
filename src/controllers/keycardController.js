@@ -423,3 +423,41 @@ export const updateRfidDevice = async (req, res) => {
         });
     }
 };
+
+
+
+export const getRfidDevicesByUser = async (req, res) => {
+    try {
+        const { UserID } = req.params;
+
+        // Basic input validation
+        if (UserID === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields: UserID, ',
+            });
+        }
+
+        const query = `SELECT * FROM RFIDScanners WHERE UserID = @UserID;`;
+
+        const result = await executeQuery(query, [
+            { name: 'UserID', value: UserID },
+        ]);
+
+        // If nothing was updated, the device may not exist
+        if (result.rowsAffected && result.rowsAffected[0] === 0) {
+            return res.status(404).json({
+                success: false,
+                message: `No RFID devices found with UserID: ${UserID}`,
+            });
+        }
+        res.status(200).json({ success: true, data: result.recordset });
+
+    } catch (error) {
+        console.error('Error getting RFID devices:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Error getting RFID devices',
+        });
+    }
+};
