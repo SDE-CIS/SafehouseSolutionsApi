@@ -60,7 +60,7 @@ export const addKeycard = async (req, res) => {
 
         const existing = await executeQuery(
             `SELECT ID FROM Keycards WHERE RfidTag = @RfidTag;`,
-            [{ name: 'RfidTag', value: RfidTag.trim() }]
+            [{ name: 'RfidTag', value: RfidTag }]
         );
 
         if (existing.recordset.length > 0)
@@ -72,8 +72,8 @@ export const addKeycard = async (req, res) => {
         `;
 
         await executeQuery(insertQuery, [
-            { name: 'RfidTag', value: RfidTag.trim() },
-            { name: 'Name', value: Name.trim() },
+            { name: 'RfidTag', value: RfidTag },
+            { name: 'Name', value: Name },
             { name: 'ExpirationDate', value: ExpirationDate || null },
             { name: 'UserID', value: UserID || null },
             { name: 'StatusTypeID', value: StatusTypeID || null }
@@ -104,7 +104,7 @@ export const updateKeycard = async (req, res) => {
             const existing = await executeQuery(
                 `SELECT ID FROM Keycards WHERE RfidTag = @RfidTag AND ID != @ID;`,
                 [
-                    { name: 'RfidTag', value: RfidTag.trim() },
+                    { name: 'RfidTag', value: RfidTag },
                     { name: 'ID', value: id }
                 ]
             );
@@ -117,10 +117,10 @@ export const updateKeycard = async (req, res) => {
         const params = [{ name: 'ID', value: id }];
 
         if (RfidTag) {
-            fields.push('RfidTag = @RfidTag'); params.push({ name: 'RfidTag', value: RfidTag.trim() });
+            fields.push('RfidTag = @RfidTag'); params.push({ name: 'RfidTag', value: RfidTag });
         }
         if (Name) {
-            fields.push('Name = @Name'); params.push({ name: 'Name', value: Name.trim() });
+            fields.push('Name = @Name'); params.push({ name: 'Name', value: Name });
         }
         if (ExpirationDate) {
             fields.push('ExpirationDate = @ExpirationDate'); params.push({ name: 'ExpirationDate', value: ExpirationDate });
@@ -251,17 +251,17 @@ export const addKeycardStatus = async (req, res) => {
 
         const existing = await executeQuery(
             `SELECT ID FROM StatusTypes WHERE LOWER(StatusName) = LOWER(@StatusName);`,
-            [{ name: 'StatusName', value: StatusName.trim() }]
+            [{ name: 'StatusName', value: StatusName }]
         );
 
         if (Array.isArray(existing.recordset) && existing.recordset.length > 0)
             return res.status(409).json({ message: 'This keycard status already exists.' });
 
         await executeQuery(
-            `INSERT INTO StatusTypes (StatusName, StatusDescription) VALUES (@StatusName, StatusDescription);`,
+            `INSERT INTO StatusTypes (StatusName, StatusDescription) VALUES (@StatusName, @StatusDescription);`,
             [
-                { name: 'StatusName', value: StatusName.trim() },
-                { name: 'StatusDescription', value: StatusDescription.trim() }
+                { name: 'StatusName', value: StatusName },
+                { name: 'StatusDescription', value: StatusDescription }
             ]
         );
 
@@ -278,41 +278,59 @@ export const updateKeycardStatus = async (req, res) => {
         const { id } = req.params;
         const { StatusName, StatusDescription } = req.body;
 
-        if (!StatusName || !StatusDescription)
-            return res.status(400).json({ message: 'Please provide both StatusName and StatusDescription.' });
+        if (StatusName == null && StatusDescription == null)
+            return res.status(400).json({ message: 'Please provide either StatusName or StatusDescription.' });
 
         const result = await executeQuery(
-            `
-            SELECT
-                (SELECT StatusName FROM StatusTypes WHERE ID = @ID) AS CurrentName,
-                (SELECT COUNT(*) FROM StatusTypes WHERE LOWER(StatusName) = LOWER(@StatusName) AND ID != @ID) AS DuplicateCount
-            `,
-            [
-                { name: 'ID', value: id },
-                { name: 'StatusName', value: StatusName.trim() }
-            ]
+            `SELECT StatusName, StatusDescription FROM StatusTypes WHERE ID = @ID`,
+            [{ name: 'ID', value: id }]
         );
 
-        const record = result.recordset[0];
+        if (result.recordset.length === 0)
+            return res.status(404).json({ message: "Keycard status not found." });
 
-        if (!record.CurrentName)
-            return res.status(404).json({ message: "This keycard status already exists." });
+        const existing = result.recordset[0];
 
-        if (record.CurrentName.toLowerCase() === StatusName.trim().toLowerCase())
-            return res.status(200).json({ message: 'Keycard status name is already up to date.' });
+        if (StatusName != null) {
+            const duplicate = await executeQuery(
+                `
+                SELECT COUNT(*) AS Count 
+                FROM StatusTypes 
+                WHERE LOWER(StatusName) = LOWER(@StatusName) AND ID != @ID
+                `,
+                [
+                    { name: 'StatusName', value: StatusName },
+                    { name: 'ID', value: id }
+                ]
+            );
 
-        if (record.DuplicateCount > 0)
-            return res.status(409).json({ message: 'This keycard status name already exists.' });
+            if (duplicate.recordset[0].Count > 0)
+                return res.status(409).json({ message: 'This keycard status name already exists.' });
+        }
+
+        const newName = StatusName != null ? StatusName : existing.StatusName;
+        const newDesc = StatusDescription != null ? StatusDescription : existing.StatusDescription;
+
+        const nameUnchanged =
+            (StatusName == null) ||
+            (existing.StatusName && StatusName && existing.StatusName.toLowerCase() === StatusName.toLowerCase());
+
+        const descUnchanged =
+            (StatusDescription == null) ||
+            (existing.StatusDescription === StatusDescription);
+
+        if (nameUnchanged && descUnchanged)
+            return res.status(200).json({ message: 'No changes needed.' });
 
         await executeQuery(
             `
             UPDATE StatusTypes
             SET StatusName = @StatusName, StatusDescription = @StatusDescription
-            WHERE ID = @ID;
+            WHERE ID = @ID
             `,
             [
-                { name: 'StatusName', value: StatusName.trim() },
-                { name: 'StatusDescription', value: StatusDescription.trim() },
+                { name: 'StatusName', value: newName },
+                { name: 'StatusDescription', value: newDesc },
                 { name: 'ID', value: id }
             ]
         );
@@ -420,6 +438,44 @@ export const updateRfidDevice = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: error.message || 'Error assigning RFID device',
+        });
+    }
+};
+
+
+
+export const getRfidDevicesByUser = async (req, res) => {
+    try {
+        const { UserID } = req.params;
+
+        // Basic input validation
+        if (UserID === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields: UserID, ',
+            });
+        }
+
+        const query = `SELECT * FROM RFIDScanners WHERE UserID = @UserID;`;
+
+        const result = await executeQuery(query, [
+            { name: 'UserID', value: UserID },
+        ]);
+
+        // If nothing was updated, the device may not exist
+        if (result.rowsAffected && result.rowsAffected[0] === 0) {
+            return res.status(404).json({
+                success: false,
+                message: `No RFID devices found with UserID: ${UserID}`,
+            });
+        }
+        res.status(200).json({ success: true, data: result.recordset });
+
+    } catch (error) {
+        console.error('Error getting RFID devices:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Error getting RFID devices',
         });
     }
 };
