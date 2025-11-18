@@ -42,20 +42,20 @@ export async function generateVideoThumbnail(videoName) {
         await pipeline(response.body, fs.createWriteStream(tempFile));
 
         const stats = fs.statSync(tempFile);
-        if (!stats.size || stats.size < 100 * 1024) {
+        if (!stats.size || stats.size < 5000) { // mindste filstørrelse 5000 bytes
             console.warn(`Skipping ${videoName}: too small (${stats.size} bytes)`);
             fs.unlinkSync(tempFile);
             return placeholderPath;
         }
 
-        const blobClient = containerClient.getBlobClient(videoName);
-        const download = await blobClient.download(0, 10 * 1024 * 1024);
-
         await new Promise((resolve, reject) => {
-            ffmpeg(download.readableStreamBody)
+            ffmpeg(tempFile)
                 .on("start", () => console.log(`FFmpeg started for ${videoName}`))
                 .on("error", reject)
-                .on("end", resolve)
+                .on("end", () => {
+                    fs.unlink(tempFile, () => { }); // ryd op efter thumbnail
+                    resolve();
+                })
                 .screenshots({
                     timestamps: ["00:00:00.5"],
                     filename: path.basename(thumbnailPath),
