@@ -24,12 +24,15 @@ router.post('/', addKeycard);
 router.post('/status', addKeycardStatus);
 router.post('/rfid', updateSmartLockState);
 
-router.put('/:id', updateKeycard);
 router.put('/status/:id', updateKeycardStatus);
 router.put('/rfid/assign', updateRfidDevice);
 
 
 router.delete('/:id', deleteKeycard);
 router.delete('/status/:id', deleteKeycardStatus);
+
+router.get('/:id', getKeycardById);
+router.put('/:id', updateKeycard);
+router.delete('/:id', deleteKeycard);
 
 export default router;
