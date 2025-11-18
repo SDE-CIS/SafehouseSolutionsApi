@@ -11,6 +11,7 @@ import temperatureRoutes from './routes/temperature.js';
 import usersRoutes from './routes/users.js';
 import videosRoutes from './routes/videos.js';
 import cameraRoutes from './routes/camera.js';
+import deviceRoutes from './routes/device.js';
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ app.use('/temperature', temperatureRoutes);
 app.use('/users', usersRoutes);
 app.use("/videos", videosRoutes);
 app.use("/camera", cameraRoutes);
+app.use("/devices", deviceRoutes);
 
 app.get('/', (req, res) => {
   res.send('Safehouse Solutions API is running');
