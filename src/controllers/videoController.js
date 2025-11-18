@@ -60,15 +60,47 @@ export const getThumbnail = async (req, res) => {
 export const streamVideo = async (req, res) => {
     try {
         const { name } = req.params;
+        const range = req.headers.range;
+
         const blobClient = containerClient.getBlobClient(name);
         const exists = await blobClient.exists();
         if (!exists) return res.status(404).send("Video not found");
+
         const blobProps = await blobClient.getProperties();
-        const contentType = blobProps.contentType || "video/mp4";
-        const download = await blobClient.download();
-        res.setHeader("Content-Type", contentType);
-        res.setHeader("Accept-Ranges", "bytes");
-        download.readableStreamBody.pipe(res);
+        const fileSize = blobProps.contentLength;
+        let contentType = blobProps.contentType;
+
+        if (!contentType || contentType === "application/octet-stream") {
+            if (name.toLowerCase().endsWith(".mp4")) contentType = "video/mp4";
+            else if (name.toLowerCase().endsWith(".avi")) contentType = "video/x-msvideo";
+            else contentType = "application/octet-stream";
+        }
+
+        if (!range) {
+            const download = await blobClient.download();
+            res.writeHead(200, {
+                "Content-Length": fileSize,
+                "Content-Type": contentType,
+            });
+            download.readableStreamBody.pipe(res);
+            return;
+        }
+
+        const CHUNK_SIZE = 10 ** 6;
+        const start = Number(range.replace(/\D/g, ""));
+        const end = Math.min(start + CHUNK_SIZE, fileSize - 1);
+        const contentLength = end - start + 1;
+
+        const downloadResponse = await blobClient.download(start, contentLength);
+
+        res.writeHead(206, {
+            "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+            "Accept-Ranges": "bytes",
+            "Content-Length": contentLength,
+            "Content-Type": contentType,
+        });
+
+        downloadResponse.readableStreamBody.pipe(res);
     } catch (error) {
         console.error("Stream error:", error.message);
         res.status(500).send(error.message);
