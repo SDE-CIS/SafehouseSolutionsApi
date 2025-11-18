@@ -60,7 +60,7 @@ export const getAllDevices = async (req, res) => {
                 DeviceType: type
             }));
 
-        const devices = [
+        const data = [
             ...normalize(temperatureResult.recordset, "TemperatureSensor"),
             ...normalize(fanResult.recordset, "FanSensor"),
             ...normalize(cameraResult.recordset, "CameraSensor"),
@@ -69,8 +69,7 @@ export const getAllDevices = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            count: devices.length,
-            devices
+            data
         });
 
     } catch (error) {
