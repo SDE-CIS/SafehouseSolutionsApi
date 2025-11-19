@@ -48,9 +48,14 @@ export const getThumbnail = async (req, res) => {
     try {
         const { name } = req.params;
         const thumbPath = path.join(THUMB_DIR, name);
+
         if (!fs.existsSync(thumbPath))
             return res.status(404).send("Thumbnail not found");
-        res.sendFile(thumbPath);
+
+        const fileBuffer = fs.readFileSync(thumbPath);
+        const base64 = fileBuffer.toString("base64");
+
+        res.status(200).send(base64);
     } catch (err) {
         console.error("Thumbnail error:", err.message);
         res.status(500).send("Error fetching thumbnail");
