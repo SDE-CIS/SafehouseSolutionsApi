@@ -16,9 +16,7 @@ const containerClient = blobService.getContainerClient(AZURE_CONTAINER);
 export async function generateVideoThumbnail(videoName) {
     try {
         const thumbDir = path.join(process.cwd(), "temp", "thumbs");
-        const downloadDir = path.join(process.cwd(), "temp", "downloads");
         fs.mkdirSync(thumbDir, { recursive: true });
-        fs.mkdirSync(downloadDir, { recursive: true });
 
         const thumbnailPath = path.join(thumbDir, `${path.parse(videoName).name}.jpg`);
         const placeholderPath = path.join("public", "images", "thumbnail-placeholder.jpg");
@@ -27,35 +25,14 @@ export async function generateVideoThumbnail(videoName) {
             return thumbnailPath;
         }
 
-        const tempFile = path.join(downloadDir, videoName);
-        const blobUrl = `${AZURE_BLOB_URL}/${AZURE_CONTAINER}/${encodeURIComponent(videoName)}?${AZURE_SAS_TOKEN}`;
-
-        const response = await fetch(blobUrl, {
-            agent: new https.Agent({ rejectUnauthorized: false }),
-        });
-
-        if (!response.ok) {
-            console.warn(`Skipping ${videoName}: Failed to fetch (${response.status})`);
-            return placeholderPath;
-        }
-
-        await pipeline(response.body, fs.createWriteStream(tempFile));
-
-        const stats = fs.statSync(tempFile);
-        if (!stats.size || stats.size < 5000) { // mindste filstørrelse 5000 bytes
-            console.warn(`Skipping ${videoName}: too small (${stats.size} bytes)`);
-            fs.unlinkSync(tempFile);
-            return placeholderPath;
-        }
+        const blobUrl =
+            `${AZURE_BLOB_URL}/${AZURE_CONTAINER}/${encodeURIComponent(videoName)}?${AZURE_SAS_TOKEN}`;
 
         await new Promise((resolve, reject) => {
-            ffmpeg(tempFile)
-                .on("start", () => console.log(`FFmpeg started for ${videoName}`))
+            ffmpeg(blobUrl)
+                .on("start", () => console.log(`FFmpeg remote-read for ${videoName}`))
                 .on("error", reject)
-                .on("end", () => {
-                    fs.unlink(tempFile, () => { }); // ryd op efter thumbnail
-                    resolve();
-                })
+                .on("end", resolve)
                 .screenshots({
                     timestamps: ["00:00:00.5"],
                     filename: path.basename(thumbnailPath),
@@ -65,9 +42,9 @@ export async function generateVideoThumbnail(videoName) {
         });
 
         return fs.existsSync(thumbnailPath) ? thumbnailPath : placeholderPath;
+
     } catch (err) {
         console.warn(`Error processing ${videoName}: ${err.message}`);
-        const placeholderPath = path.join("public", "images", "thumbnail-placeholder.jpg");
-        return placeholderPath;
+        return path.join("public", "images", "thumbnail-placeholder.jpg");
     }
 }
