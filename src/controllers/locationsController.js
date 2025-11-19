@@ -19,7 +19,8 @@ export const getLocationsByID = async (req, res) => {
         const locationQuery = `SELECT * FROM Locations WHERE ID = @ID`;
         const result = await executeQuery(locationQuery, [{ name: 'ID', value: id }]);
         if (result.recordset.length === 0) {
-            return res.status(404).json({ success: false, message: 'Location not found' });
+            const msg = getMessage(messages.error.notFound, { entity: "Location" });
+            return res.status(404).json({ success: false, message: msg });
         }
         res.status(200).json({ success: true, data: result.recordset[0] });
     } catch (error) {

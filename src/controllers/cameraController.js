@@ -1,4 +1,5 @@
 import { executeQuery } from '../utils/executeQuery.js';
+import { messages, getMessage } from "../utils/responseMessage.js";
 
 // GET /camera/:id?page=1&limit=20
 export const getCameraDataByID = async (req, res) => {
@@ -78,8 +79,10 @@ export const getCameraByID = async (req, res) => {
     try {
         const locationQuery = `SELECT * FROM CameraSensors WHERE ID = @ID`;
         const result = await executeQuery(locationQuery, [{ name: 'ID', value: id }]);
-        if (result.recordset.length === 0)
-            return res.status(404).json({ success: false, message: 'Camera device not found.' });
+        if (result.recordset.length === 0) {
+            const msg = getMessage(messages.error.notFound, { entity: "Camera" });
+            return res.status(404).json({ success: false, message: msg });
+        }
         res.status(200).json({ success: true, data: result.recordset[0] });
     } catch (error) {
         console.error('Connection error:', error);
@@ -104,10 +107,12 @@ export const addCamera = async (req, res) => {
             ]
         );
 
-        res.status(201).json({ success: true, message: 'New camera device registered successfully!' });
+        const msg = getMessage(messages.success.added, { entity: "Camera" });
+        res.status(201).json({ success: true, message: msg });
     } catch (error) {
         console.error('Error adding new camera device:', error);
-        res.status(500).json({ success: false, message: error.message || 'Failed to register the new camera device.' });
+        const msg = getMessage(messages.error.failed, { action: "register", entity: "camera" });
+        res.status(500).json({ success: false, message: error.message || msg });
     }
 };
 
@@ -121,17 +126,18 @@ export const deleteCamera = async (req, res) => {
             [{ name: 'ID', value: id }]
         );
 
-        if (existing.recordset.length === 0)
-            return res.status(404).json({ message: 'Camera device not found.' });
+        if (existing.recordset.length === 0) {
+            const msg = getMessage(messages.error.notFound, { entity: "Camera" });
+            return res.status(404).json({ message: msg });
+        }
 
-        await executeQuery(
-            `DELETE FROM CameraSensors WHERE ID = @ID;`,
-            [{ name: 'ID', value: id }]
-        );
+        await executeQuery(`DELETE FROM CameraSensors WHERE ID = @ID;`, [{ name: 'ID', value: id }]);
 
-        res.status(200).json({ message: 'Camera device deleted successfully!' });
+        const msg = getMessage(messages.success.deleted, { entity: "Camera" });
+        res.status(200).json({ message: msg });
     } catch (error) {
         console.error(error);
-        res.status(400).json({ message: 'Failed to delete camera device.' });
+        const msg = getMessage(messages.error.failed, { action: "delete", entity: "camera" });
+        res.status(400).json({ message: msg });
     }
 };

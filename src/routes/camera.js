@@ -5,10 +5,11 @@ import { authMiddleware } from '../middleware/authMiddleware.js';
 const router = Router();
 router.use(authMiddleware);
 
-router.get('/:id', getCameraDataByID);
 router.get('/device', getCameras);
-router.get('/device/:id', getCameraByID);
 router.post('/device', addCamera);
+
+router.get('/:id', getCameraDataByID);
+router.get('/device/:id', getCameraByID);
 router.delete('/device/:id', deleteCamera);
 
 export default router;

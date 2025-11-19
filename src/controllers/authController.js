@@ -2,8 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { executeQuery } from '../utils/executeQuery.js';
 
-const generateToken = (userId, username, secret, expiresIn) =>
-    jwt.sign({ id: userId, username }, secret, { expiresIn });
+const generateToken = (userId, username, secret, expiresIn) => jwt.sign({ id: userId, username }, secret, { expiresIn });
 
 const updateRefreshToken = async (userId, refreshToken) =>
     executeQuery(
@@ -33,9 +32,7 @@ export const authUser = async (req, res) => {
             return res.status(401).json({ success: false, message: "This user doesn't exist." });
 
         const storedPassword = user.Password || '';
-
         const isEncrypted = /^\$2[aby]\$/.test(storedPassword);
-
         let isPasswordValid = false;
 
         if (isEncrypted) {

@@ -91,11 +91,8 @@ export const updateKeycard = async (req, res) => {
     try {
         const { id } = req.params;
         const { RfidTag, Name, ExpirationDate, UserID, StatusTypeID } = req.body;
-
-        const keycard = await executeQuery(
-            `SELECT * FROM Keycards WHERE ID = @ID;`,
-            [{ name: 'ID', value: id }]
-        );
+    
+        const keycard = await executeQuery(`SELECT * FROM Keycards WHERE ID = @ID;`, [{ name: 'ID', value: id }]);
 
         if (!keycard.recordset.length)
             return res.status(404).json({ success: false, message: 'Keycard not found.' });
@@ -393,15 +390,10 @@ export const updateRfidDevice = async (req, res) => {
     try {
         const { UserID, Location, DeviceID, Active } = req.body;
 
-        // Basic input validation
         if (!UserID || !Location || !DeviceID || Active === undefined) {
-            return res.status(400).json({
-                success: false,
-                message: 'Missing required fields: UserID, Location, DeviceID, or Active',
-            });
+            return res.status(400).json({success: false, message: 'Missing required fields: UserID, Location, DeviceID, or Active'});
         }
 
-        // SQL Server UPDATE query
         const query = `
             UPDATE RFIDScanners
             SET 
@@ -418,21 +410,12 @@ export const updateRfidDevice = async (req, res) => {
             { name: 'DeviceID', value: DeviceID }
         ]);
 
-        // If nothing was updated, the device may not exist
         if (result.rowsAffected && result.rowsAffected[0] === 0) {
-            return res.status(404).json({
-                success: false,
-                message: `No RFID device found with ID: ${DeviceID}`,
-            });
+            return res.status(404).json({success: false, message: `No RFID device found with ID: ${DeviceID}`});
         }
 
         publishAssignRfid(Location, UserID, DeviceID, client);
-
-        return res.status(200).json({
-            success: true,
-            message: `RFID device ${DeviceID} successfully assigned to user ${UserID}`,
-        });
-
+        return res.status(200).json({success: true, message: `RFID device ${DeviceID} successfully assigned to user ${UserID}`});
     } catch (error) {
         console.error('Error assigning RFID device:', error);
         return res.status(500).json({
@@ -442,35 +425,22 @@ export const updateRfidDevice = async (req, res) => {
     }
 };
 
-
-
 export const getRfidDevicesByUser = async (req, res) => {
     try {
         const { UserID } = req.params;
 
-        // Basic input validation
         if (UserID === undefined) {
-            return res.status(400).json({
-                success: false,
-                message: 'Missing required fields: UserID, ',
-            });
+            return res.status(400).json({success: false, message: 'Missing required fields: UserID, '});
         }
 
         const query = `SELECT * FROM RFIDScanners WHERE UserID = @UserID;`;
+        const result = await executeQuery(query, [{ name: 'UserID', value: UserID },]);
 
-        const result = await executeQuery(query, [
-            { name: 'UserID', value: UserID },
-        ]);
-
-        // If nothing was updated, the device may not exist
         if (result.rowsAffected && result.rowsAffected[0] === 0) {
-            return res.status(404).json({
-                success: false,
-                message: `No RFID devices found with UserID: ${UserID}`,
-            });
+            return res.status(404).json({success: false, message: `No RFID devices found with UserID: ${UserID}`});
         }
+        
         res.status(200).json({ success: true, data: result.recordset });
-
     } catch (error) {
         console.error('Error getting RFID devices:', error);
         return res.status(500).json({
